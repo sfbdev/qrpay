@@ -1,0 +1,296 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Light */
+  --bg: #FAFAFA;
+  --surface: #FFFFFF;
+  --surface-2: #F4F4F5;
+  --border: rgba(0,0,0,0.06);
+  --border-strong: rgba(0,0,0,0.10);
+  --text-1: #09090B;
+  --text-2: #71717A;
+  --text-3: #A1A1AA;
+
+  --brand: #6366F1;
+  --primary: var(--brand);
+  --primary-hover: color-mix(in srgb, var(--brand) 85%, #000);
+  --primary-subtle: color-mix(in srgb, var(--brand) 10%, transparent);
+  --primary-subtle-border: color-mix(in srgb, var(--brand) 22%, transparent);
+
+  --sidebar-bg: #0C0C0E;
+  --sidebar-surface: #141416;
+  --sidebar-border: rgba(255,255,255,0.06);
+  --sidebar-text: rgba(255,255,255,0.92);
+  --sidebar-muted: rgba(255,255,255,0.40);
+  --sidebar-active-bg: rgba(255,255,255,0.08);
+  --sidebar-active-bar: var(--brand);
+
+  --success-bg: #ECFDF5; --success-text: #059669; --success-border: #A7F3D0;
+  --warning-bg: #FFFBEB; --warning-text: #D97706; --warning-border: #FDE68A;
+  --danger-bg: #FEF2F2; --danger-text: #DC2626; --danger-border: #FECACA;
+  --info-bg: #EEF2FF; --info-text: #4F46E5; --info-border: #C7D2FE;
+  --purple-bg: #F5F3FF; --purple-text: #7C3AED; --purple-border: #DDD6FE;
+
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+  --shadow-xl: 0 16px 48px rgba(0,0,0,0.10);
+
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  --transition: 150ms cubic-bezier(0.4,0,0.2,1);
+  --transition-slow: 250ms cubic-bezier(0.4,0,0.2,1);
+}
+
+[data-theme="dark"] {
+  --bg: #09090B;
+  --surface: #111113;
+  --surface-2: #18181B;
+  --border: rgba(255,255,255,0.06);
+  --border-strong: rgba(255,255,255,0.10);
+  --text-1: #FAFAFA;
+  --text-2: #A1A1AA;
+  --text-3: #52525B;
+
+  --primary: color-mix(in srgb, var(--brand) 75%, #fff);
+  --primary-hover: color-mix(in srgb, var(--brand) 90%, #fff);
+  --primary-subtle: color-mix(in srgb, var(--brand) 12%, transparent);
+  --primary-subtle-border: color-mix(in srgb, var(--brand) 25%, transparent);
+
+  --success-bg: rgba(16,185,129,0.10); --success-text: #34D399; --success-border: rgba(16,185,129,0.25);
+  --warning-bg: rgba(245,158,11,0.10); --warning-text: #FBBF24; --warning-border: rgba(245,158,11,0.25);
+  --danger-bg: rgba(239,68,68,0.10); --danger-text: #F87171; --danger-border: rgba(239,68,68,0.25);
+  --info-bg: rgba(99,102,241,0.10); --info-text: #A5B4FC; --info-border: rgba(99,102,241,0.25);
+  --purple-bg: rgba(139,92,246,0.10); --purple-text: #C4B5FD; --purple-border: rgba(139,92,246,0.25);
+
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+}
+
+/* ─── Base ─── */
+html {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text-1);
+  height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background var(--transition-slow), color var(--transition-slow);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+#app {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+/* ─── Button System ─── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+  line-height: 1.2;
+  position: relative;
+  overflow: hidden;
+  letter-spacing: -0.01em;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: scale(0.98) translateY(0);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-secondary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+}
+
+.btn-secondary:hover {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-2);
+}
+
+.btn-ghost:hover {
+  background: var(--surface-2);
+  color: var(--text-1);
+}
+
+.btn-danger {
+  background: #DC2626;
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: #B91C1C;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn-sm {
+  padding: 7px 12px;
+  font-size: 12px;
+}
+
+/* ─── Card / Surface ─── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition), background var(--transition-slow);
+}
+
+/* ─── Badge System ─── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  transition: background var(--transition-slow), color var(--transition-slow);
+}
+
+.badge-green { background: var(--success-bg); color: var(--success-text); }
+.badge-yellow { background: var(--warning-bg); color: var(--warning-text); }
+.badge-red { background: var(--danger-bg); color: var(--danger-text); }
+.badge-gray { background: var(--surface-2); color: var(--text-2); }
+.badge-blue { background: var(--info-bg); color: var(--info-text); }
+.badge-purple { background: var(--purple-bg); color: var(--purple-text); }
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+/* ─── Input / Select / Label ─── */
+input, select, textarea {
+  font-family: inherit;
+  transition: border-color var(--transition), box-shadow var(--transition), background var(--transition-slow), color var(--transition-slow);
+}
+
+label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  letter-spacing: -0.01em;
+}
+
+/* ─── Global Transitions ─── */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity var(--transition);
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+.slide-enter-active, .slide-leave-active {
+  transition: all var(--transition);
+}
+.slide-enter-from {
+  opacity: 0;
+  transform: translateX(12px);
+}
+.slide-leave-to {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+
+/* ─── Staggered Slide-Up Animation ─── */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Modal Animation ─── */
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ─── Pulse Glow (Login logo) ─── */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 32px 12px rgba(99, 102, 241, 0.12);
+  }
+}
+
+/* ─── Spin animation ─── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
