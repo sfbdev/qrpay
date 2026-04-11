@@ -135,6 +135,18 @@
               </div>
             </div>
 
+            <!-- Session PIN -->
+            <div class="session-pin">
+              <div class="pin-label">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                Customer PIN
+              </div>
+              <div class="pin-digits">
+                <span v-for="d in selected.pin" :key="d" class="pin-digit">{{ d }}</span>
+              </div>
+              <div class="pin-hint">Tell this PIN to the customer after they scan the QR.</div>
+            </div>
+
             <div class="action-grid">
               <button class="action-btn" @click="viewOrders">
                 <div class="action-icon icon-indigo">
@@ -232,19 +244,23 @@ function handleFullscreenBtn() {
 }
 
 const tables = ref([
-  { id: 1, number: 1, capacity: 4, status: 'empty', guests: 0, total: 0, openedAt: '' },
-  { id: 2, number: 2, capacity: 2, status: 'empty', guests: 0, total: 0, openedAt: '' },
-  { id: 3, number: 3, capacity: 4, status: 'open', guests: 4, total: 520, openedAt: '19:32' },
-  { id: 4, number: 4, capacity: 6, status: 'empty', guests: 0, total: 0, openedAt: '' },
-  { id: 5, number: 5, capacity: 2, status: 'waiting', guests: 2, total: 180, openedAt: '20:05' },
-  { id: 6, number: 6, capacity: 4, status: 'empty', guests: 0, total: 0, openedAt: '' },
-  { id: 7, number: 7, capacity: 8, status: 'payment', guests: 6, total: 940, openedAt: '18:55' },
-  { id: 8, number: 8, capacity: 4, status: 'empty', guests: 0, total: 0, openedAt: '' },
-  { id: 9, number: 9, capacity: 4, status: 'open', guests: 3, total: 310, openedAt: '20:18' },
-  { id: 10, number: 10, capacity: 2, status: 'empty', guests: 0, total: 0, openedAt: '' },
-  { id: 11, number: 11, capacity: 4, status: 'empty', guests: 0, total: 0, openedAt: '' },
-  { id: 12, number: 12, capacity: 6, status: 'open', guests: 5, total: 720, openedAt: '19:44' },
+  { id: 1, number: 1, capacity: 4, status: 'empty', guests: 0, total: 0, openedAt: '', pin: null },
+  { id: 2, number: 2, capacity: 2, status: 'empty', guests: 0, total: 0, openedAt: '', pin: null },
+  { id: 3, number: 3, capacity: 4, status: 'open', guests: 4, total: 520, openedAt: '19:32', pin: '3847' },
+  { id: 4, number: 4, capacity: 6, status: 'empty', guests: 0, total: 0, openedAt: '', pin: null },
+  { id: 5, number: 5, capacity: 2, status: 'waiting', guests: 2, total: 180, openedAt: '20:05', pin: '2916' },
+  { id: 6, number: 6, capacity: 4, status: 'empty', guests: 0, total: 0, openedAt: '', pin: null },
+  { id: 7, number: 7, capacity: 8, status: 'payment', guests: 6, total: 940, openedAt: '18:55', pin: '7053' },
+  { id: 8, number: 8, capacity: 4, status: 'empty', guests: 0, total: 0, openedAt: '', pin: null },
+  { id: 9, number: 9, capacity: 4, status: 'open', guests: 3, total: 310, openedAt: '20:18', pin: '4421' },
+  { id: 10, number: 10, capacity: 2, status: 'empty', guests: 0, total: 0, openedAt: '', pin: null },
+  { id: 11, number: 11, capacity: 4, status: 'empty', guests: 0, total: 0, openedAt: '', pin: null },
+  { id: 12, number: 12, capacity: 6, status: 'open', guests: 5, total: 720, openedAt: '19:44', pin: '6182' },
 ])
+
+function generatePin() {
+  return String(Math.floor(1000 + Math.random() * 9000))
+}
 
 function statusLabel(s) {
   return { empty: 'Empty', open: 'Open', waiting: 'Waiting', payment: 'Payment' }[s] || s
@@ -257,12 +273,14 @@ function selectTable(t) { selected.value = t }
 function openTable() {
   selected.value.status = 'open'
   selected.value.openedAt = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+  selected.value.pin = generatePin()
   selected.value = null
 }
 function closeTable() {
   selected.value.status = 'empty'
   selected.value.guests = 0
   selected.value.total = 0
+  selected.value.pin = null
   selected.value = null
 }
 function viewOrders() {}
@@ -640,6 +658,55 @@ h1 {
   font-weight: 700;
   color: var(--text-1);
   font-variant-numeric: tabular-nums;
+}
+
+/* Session PIN */
+.session-pin {
+  background: var(--primary-subtle);
+  border: 1px solid var(--primary-subtle-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pin-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.pin-digits {
+  display: flex;
+  gap: 8px;
+}
+
+.pin-digit {
+  width: 44px;
+  height: 52px;
+  background: var(--surface);
+  border: 1px solid var(--primary-subtle-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--primary);
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pin-hint {
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.5;
 }
 
 /* Action grid */
