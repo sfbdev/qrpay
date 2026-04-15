@@ -27,4 +27,12 @@ const routes = [
   }
 ]
 
-export default createRouter({ history: createWebHistory(), routes })
+const router = createRouter({ history: createWebHistory(), routes })
+
+router.beforeEach((to) => {
+  const token = localStorage.getItem('qrpay_kiosk_token')
+  if (to.path.startsWith('/app') && !token) return '/login'
+  if (to.path === '/login' && token) return '/app/dashboard'
+})
+
+export default router

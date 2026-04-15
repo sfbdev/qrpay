@@ -211,13 +211,16 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useFullscreen } from '../composables/useFullscreen.js'
+import { api, getTenantSlug } from '../composables/useApi.js'
 
 const router = useRouter()
 const showAddTable = ref(false)
 const selected = ref(null)
+const error = ref('')
+const loading = ref(false)
 const { isFullscreen, toggle: toggleFullscreen } = useFullscreen()
 
 // PIN state
@@ -243,23 +246,38 @@ function handleFullscreenBtn() {
   }
 }
 
-const tables = ref([
-  { id: 1, number: 1, capacity: 4, status: 'empty', guests: 0, total: 0, openedAt: '', pin: null },
-  { id: 2, number: 2, capacity: 2, status: 'empty', guests: 0, total: 0, openedAt: '', pin: null },
-  { id: 3, number: 3, capacity: 4, status: 'open', guests: 4, total: 520, openedAt: '19:32', pin: '3847' },
-  { id: 4, number: 4, capacity: 6, status: 'empty', guests: 0, total: 0, openedAt: '', pin: null },
-  { id: 5, number: 5, capacity: 2, status: 'waiting', guests: 2, total: 180, openedAt: '20:05', pin: '2916' },
-  { id: 6, number: 6, capacity: 4, status: 'empty', guests: 0, total: 0, openedAt: '', pin: null },
-  { id: 7, number: 7, capacity: 8, status: 'payment', guests: 6, total: 940, openedAt: '18:55', pin: '7053' },
-  { id: 8, number: 8, capacity: 4, status: 'empty', guests: 0, total: 0, openedAt: '', pin: null },
-  { id: 9, number: 9, capacity: 4, status: 'open', guests: 3, total: 310, openedAt: '20:18', pin: '4421' },
-  { id: 10, number: 10, capacity: 2, status: 'empty', guests: 0, total: 0, openedAt: '', pin: null },
-  { id: 11, number: 11, capacity: 4, status: 'empty', guests: 0, total: 0, openedAt: '', pin: null },
-  { id: 12, number: 12, capacity: 6, status: 'open', guests: 5, total: 720, openedAt: '19:44', pin: '6182' },
-])
+const tables = ref([])
 
-function generatePin() {
-  return String(Math.floor(1000 + Math.random() * 9000))
+function mapTable(t) {
+  const activeSession = t.sessions?.find(s => s.status === 'ACTIVE')
+  const sessionTotal = activeSession?.orders?.reduce((sum, o) => {
+    return sum + (o.items?.reduce((s, i) => s + (i.price * i.quantity), 0) || 0)
+  }, 0) || 0
+  const openedAt = activeSession?.createdAt
+    ? new Date(activeSession.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    : ''
+
+  return {
+    id: t.id,
+    number: t.number,
+    label: t.label,
+    capacity: t.capacity,
+    status: t.status === 'OPEN' ? 'open' : t.status === 'CLOSED' ? 'payment' : 'empty',
+    guests: activeSession?.guestCount || 0,
+    total: sessionTotal,
+    openedAt,
+    pin: activeSession?.pin || null,
+    sessionId: activeSession?.id || null,
+  }
+}
+
+async function fetchTables() {
+  try {
+    const data = await api('/api/tables')
+    tables.value = data.map(mapTable)
+  } catch (e) {
+    error.value = e.message
+  }
 }
 
 function statusLabel(s) {
@@ -270,22 +288,83 @@ function statusBadge(s) {
 }
 
 function selectTable(t) { selected.value = t }
-function openTable() {
-  selected.value.status = 'open'
-  selected.value.openedAt = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-  selected.value.pin = generatePin()
-  selected.value = null
+
+async function openTable() {
+  loading.value = true
+  try {
+    const data = await api(`/api/tables/${selected.value.id}/open`, {
+      method: 'POST',
+      body: {},
+    })
+    await fetchTables()
+    // Find the updated table to show PIN
+    const updated = tables.value.find(t => t.id === selected.value.id)
+    if (updated) {
+      selected.value = updated
+    } else {
+      selected.value = null
+    }
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    loading.value = false
+  }
 }
-function closeTable() {
-  selected.value.status = 'empty'
-  selected.value.guests = 0
-  selected.value.total = 0
-  selected.value.pin = null
-  selected.value = null
+
+async function closeTable() {
+  loading.value = true
+  try {
+    await api(`/api/tables/${selected.value.id}/close`, {
+      method: 'POST',
+    })
+    selected.value = null
+    await fetchTables()
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    loading.value = false
+  }
 }
-function viewOrders() {}
+
+function viewOrders() {
+  router.push('/app/orders')
+}
 function printQR() {}
 
+// WebSocket
+let ws = null
+function connectWs() {
+  const tenantSlug = getTenantSlug()
+  const WS_BASE = import.meta.env.VITE_WS_URL || 'ws://localhost:3000'
+  ws = new WebSocket(`${WS_BASE}/ws?tenantSlug=${tenantSlug}`)
+  ws.onmessage = (e) => {
+    try {
+      const event = JSON.parse(e.data)
+      if (['TABLE_OPENED', 'TABLE_CLOSED', 'ORDER_CREATED'].includes(event.type)) {
+        fetchTables()
+      }
+    } catch {
+      // ignore malformed messages
+    }
+  }
+  ws.onclose = () => {
+    // reconnect after 3 seconds
+    setTimeout(() => {
+      if (!ws || ws.readyState === WebSocket.CLOSED) {
+        connectWs()
+      }
+    }, 3000)
+  }
+}
+
+onMounted(() => {
+  fetchTables()
+  connectWs()
+})
+onUnmounted(() => {
+  ws?.close()
+  ws = null
+})
 
 // Navigation guard
 onBeforeRouteLeave((to, from, next) => {

@@ -119,40 +119,64 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { api } from '../composables/useApi.js'
 
 const payMethod = ref('card')
 const activeBill = ref(null)
+const error = ref('')
+const loading = ref(false)
 
-const bills = ref([
-  {
-    id: 1, table: 3, guests: 4, time: '19:32', total: 520, paymentRequested: false,
-    receiptNo: '20260414-0005',
-    items: [
-      { id: 1, name: 'Margherita Pizza', qty: 1, price: 280, note: 'az pişmiş' },
-      { id: 2, name: 'Efes Bira', qty: 2, price: 90, note: '' },
-      { id: 3, name: 'Cola', qty: 1, price: 60, note: '' },
-    ]
-  },
-  {
-    id: 2, table: 7, guests: 6, time: '18:55', total: 940, paymentRequested: true,
-    receiptNo: '20260414-0003',
-    items: [
-      { id: 1, name: 'Sucuklu Pizza', qty: 2, price: 320, note: 'soğansız' },
-      { id: 2, name: 'Efes Bira', qty: 4, price: 90, note: '' },
-      { id: 3, name: 'Su', qty: 2, price: 20, note: '' },
-    ]
-  },
-  {
-    id: 3, table: 9, guests: 3, time: '20:18', total: 310, paymentRequested: false,
-    receiptNo: '20260414-0007',
-    items: [
-      { id: 1, name: 'Margherita Pizza', qty: 1, price: 280, note: '' },
-      { id: 2, name: 'Su', qty: 3, price: 20, note: '' },
-      { id: 3, name: 'Cola', qty: 1, price: 60, note: '' },
-    ]
-  },
-])
+const bills = ref([])
+
+function mapBill(table) {
+  const session = table.sessions?.find(s => s.status === 'ACTIVE')
+  if (!session) return null
+
+  const items = []
+  let total = 0
+  for (const order of (session.orders || [])) {
+    for (const item of (order.items || [])) {
+      const lineTotal = item.price * item.quantity
+      total += lineTotal
+      items.push({
+        id: item.id,
+        name: item.name,
+        qty: item.quantity,
+        price: item.price,
+        note: item.note || '',
+      })
+    }
+  }
+
+  const openedAt = session.createdAt
+    ? new Date(session.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
+    : ''
+
+  return {
+    id: table.id,
+    sessionId: session.id,
+    table: table.number,
+    guests: session.guestCount || 0,
+    time: openedAt,
+    total,
+    paymentRequested: session.paymentRequested || false,
+    receiptNo: session.receiptNo || '',
+    items,
+  }
+}
+
+async function fetchBills() {
+  try {
+    const data = await api('/api/tables')
+    const openTables = data.filter(t => t.status === 'OPEN')
+    bills.value = openTables.map(mapBill).filter(Boolean)
+  } catch (e) {
+    error.value = e.message
+  }
+}
+
+onMounted(fetchBills)
 
 const subtotal = computed(() => {
   if (!activeBill.value) return 0
@@ -160,9 +184,27 @@ const subtotal = computed(() => {
 })
 const vat = computed(() => activeBill.value ? activeBill.value.total - subtotal.value : 0)
 
-function closeAccount() {
-  bills.value = bills.value.filter(b => b.id !== activeBill.value.id)
-  activeBill.value = null
+async function closeAccount() {
+  if (!activeBill.value) return
+  loading.value = true
+  try {
+    const method = payMethod.value === 'cash' ? 'CASH' : 'CARD'
+    await api('/api/payments', {
+      method: 'POST',
+      body: {
+        sessionId: activeBill.value.sessionId,
+        amount: activeBill.value.total,
+        method,
+      },
+    })
+    bills.value = bills.value.filter(b => b.id !== activeBill.value.id)
+    activeBill.value = null
+    await fetchBills()
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

@@ -58,13 +58,13 @@
             <div class="user-role">Admin</div>
           </div>
         </div>
-        <RouterLink to="/login" class="logout-btn" title="Sign out">
+        <button class="logout-btn" title="Sign out" @click="logout">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
             <polyline points="16 17 21 12 16 7"/>
             <line x1="21" y1="12" x2="9" y2="12"/>
           </svg>
-        </RouterLink>
+        </button>
       </div>
     </aside>
 
@@ -80,9 +80,12 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useTheme } from '../../composables/useTheme.js'
 import { useFullscreen } from '../../composables/useFullscreen.js'
+import { removeToken } from '../../composables/useApi.js'
 
+const router = useRouter()
 const { theme, toggle } = useTheme()
 const { isFullscreen } = useFullscreen()
 
@@ -91,6 +94,11 @@ watch(collapsed, v => localStorage.setItem('qrpay-sidebar', v ? 'collapsed' : 'e
 
 function toggleCollapse() {
   collapsed.value = !collapsed.value
+}
+
+function logout() {
+  removeToken()
+  router.push('/login')
 }
 
 const navItems = [

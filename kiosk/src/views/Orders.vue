@@ -81,46 +81,115 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { api, getTenantSlug } from '../composables/useApi.js'
 
 const activeFilter = ref('all')
-const filters = [
-  { label: 'All', value: 'all' },
-  { label: 'New', value: 'New', count: 3 },
-  { label: 'Preparing', value: 'Preparing' },
-  { label: 'Delivered', value: 'Delivered' },
-]
+const error = ref('')
+const loading = ref(false)
 
-const orders = ref([
-  { id: 1, table: 3, item: 'Margherita Pizza', guest: 'Ahmet', time: '2 min ago', status: 'New', note: 'medium rare', justApproved: false },
-  { id: 2, table: 7, item: '2x Efes Bira', guest: 'Veli', time: '5 min ago', status: 'New', note: '', justApproved: false },
-  { id: 3, table: 7, item: 'Sucuklu Pizza', guest: 'Mehmet', time: '5 min ago', status: 'New', note: 'no onion', justApproved: false },
-  { id: 4, table: 5, item: 'Cola', guest: 'Ayşe', time: '8 min ago', status: 'Preparing', note: '', justApproved: false },
-  { id: 5, table: 9, item: 'Su', guest: 'Fatma', time: '11 min ago', status: 'Delivered', note: '', justApproved: false },
-  { id: 6, table: 12, item: '3x Cola', guest: 'Ali', time: '14 min ago', status: 'Delivered', note: '', justApproved: false },
-])
+const orders = ref([])
+
+const filters = computed(() => {
+  const newCount = orders.value.filter(o => o.status === 'New').length
+  return [
+    { label: 'All', value: 'all' },
+    { label: 'New', value: 'New', count: newCount || undefined },
+    { label: 'Preparing', value: 'Preparing' },
+    { label: 'Delivered', value: 'Delivered' },
+  ]
+})
+
+function mapStatus(s) {
+  const map = {
+    PENDING_APPROVAL: 'New',
+    APPROVED: 'Preparing',
+    PREPARING: 'Preparing',
+    DELIVERED: 'Delivered',
+    CANCELLED: 'Cancelled',
+  }
+  return map[s] || s
+}
+
+function timeAgo(dateStr) {
+  if (!dateStr) return ''
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000)
+  if (diff < 1) return 'just now'
+  if (diff === 1) return '1 min ago'
+  return `${diff} min ago`
+}
+
+function mapOrder(o) {
+  const itemSummary = o.items?.map(i => {
+    const prefix = i.quantity > 1 ? `${i.quantity}x ` : ''
+    return prefix + i.name
+  }).join(', ') || ''
+
+  return {
+    id: o.id,
+    table: o.tableNumber || o.session?.tableNumber || '?',
+    item: itemSummary,
+    guest: o.guestName || o.session?.guestName || '',
+    time: timeAgo(o.createdAt),
+    status: mapStatus(o.status),
+    note: o.note || '',
+    justApproved: false,
+  }
+}
+
+async function fetchOrders() {
+  try {
+    const data = await api('/api/orders')
+    orders.value = data.map(mapOrder)
+  } catch (e) {
+    error.value = e.message
+  }
+}
 
 const filteredOrders = computed(() =>
   activeFilter.value === 'all' ? orders.value : orders.value.filter(o => o.status === activeFilter.value)
 )
 
-function orderBadge(s) {
-  return { New: 'badge-red', 'Preparing': 'badge-yellow', 'Delivered': 'badge-gray' }[s] || 'badge-gray'
-}
-
 function indicatorColor(s) {
-  return { New: 'red', 'Preparing': 'amber', 'Delivered': 'gray' }[s] || 'gray'
+  return { New: 'red', 'Preparing': 'amber', 'Delivered': 'gray', 'Cancelled': 'gray' }[s] || 'gray'
 }
 
-function approve(o) {
+async function approve(o) {
   o.justApproved = true
-  setTimeout(() => {
-    o.status = 'Preparing'
+  try {
+    await api(`/api/orders/${o.id}/approve`, { method: 'PUT' })
+    setTimeout(() => {
+      o.status = 'Preparing'
+      o.justApproved = false
+    }, 500)
+  } catch (e) {
     o.justApproved = false
-  }, 500)
+    error.value = e.message
+  }
 }
-function reject(o) { orders.value = orders.value.filter(x => x.id !== o.id) }
-function deliver(o) { o.status = 'Delivered' }
+
+async function reject(o) {
+  try {
+    await api(`/api/orders/${o.id}/cancel`, { method: 'PUT' })
+    orders.value = orders.value.filter(x => x.id !== o.id)
+  } catch (e) {
+    error.value = e.message
+  }
+}
+
+function deliver(o) {
+  o.status = 'Delivered'
+}
+
+// Polling for new orders every 10 seconds
+let pollInterval = null
+onMounted(() => {
+  fetchOrders()
+  pollInterval = setInterval(fetchOrders, 10000)
+})
+onUnmounted(() => {
+  if (pollInterval) clearInterval(pollInterval)
+})
 </script>
 
 <style lang="scss" scoped>

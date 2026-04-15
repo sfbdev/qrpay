@@ -32,13 +32,13 @@
 
         <form @submit.prevent="login" class="login-form">
           <div class="field">
-            <label for="email">Email</label>
+            <label for="username">Username</label>
             <input
-              id="email"
-              v-model="form.email"
-              type="email"
-              placeholder="admin@freyacafe.com"
-              autocomplete="email"
+              id="username"
+              v-model="form.username"
+              type="text"
+              placeholder="admin"
+              autocomplete="username"
             />
           </div>
           <div class="field">
@@ -54,9 +54,10 @@
               autocomplete="current-password"
             />
           </div>
-          <button type="submit" class="btn btn-primary login-btn">
-            Sign In
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          <p v-if="error" class="error-msg">{{ error }}</p>
+          <button type="submit" class="btn btn-primary login-btn" :disabled="loading">
+            {{ loading ? 'Signing in...' : 'Sign In' }}
+            <svg v-if="!loading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </button>
         </form>
 
@@ -69,14 +70,33 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { api, setToken } from '../composables/useApi.js'
 
 const router = useRouter()
-const form = reactive({ email: '', password: '' })
+const form = reactive({ username: '', password: '' })
+const error = ref('')
+const loading = ref(false)
 
-function login() {
-  router.push('/app/dashboard')
+async function login() {
+  error.value = ''
+  loading.value = true
+  try {
+    const tenantSlug = 'freya-cafe'
+    const data = await api('/auth/login', {
+      method: 'POST',
+      body: { tenantSlug, username: form.username, password: form.password },
+    })
+    setToken(data.token)
+    localStorage.setItem('qrpay_kiosk_user', JSON.stringify(data.user))
+    localStorage.setItem('qrpay_kiosk_tenant', tenantSlug)
+    router.push('/app/dashboard')
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -290,12 +310,29 @@ function login() {
   color: var(--text-3);
 }
 
+.error-msg {
+  color: #DC2626;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+  padding: 8px 12px;
+  background: rgba(220, 38, 38, 0.08);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+}
+
 .login-btn {
   width: 100%;
   padding: 12px 18px;
   font-size: 14px;
   margin-top: 4px;
   transition: all var(--transition);
+}
+
+.login-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .login-btn:hover {

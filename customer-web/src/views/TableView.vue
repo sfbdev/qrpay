@@ -13,7 +13,7 @@
           </svg>
         </div>
         <div>
-          <div class="brand-name">Freya Cafe</div>
+          <div class="brand-name">{{ brandName }}</div>
           <div class="table-tag">{{ t.table }} {{ $route.params.tableId }}</div>
         </div>
       </div>
@@ -144,7 +144,7 @@
             <span>{{ formatPrice(subtotal) }}</span>
           </div>
           <div class="summary-row">
-            <span>{{ t.vat }} (%18)</span>
+            <span>{{ t.vat }} (%{{ Math.round(vatRate * 100) }})</span>
             <span>{{ formatPrice(vatAmount) }}</span>
           </div>
           <div class="summary-row total">
@@ -160,7 +160,7 @@
       <div v-for="cat in menuCategories" :key="cat.id" class="menu-category">
         <div class="cat-title">{{ cat.name }}</div>
         <div class="card menu-card">
-          <div v-for="(product, i) in cat.products" :key="product.id" class="product-row" :class="{ last: i === cat.products.length - 1 }">
+          <div v-for="(product, i) in cat.items" :key="product.id" class="product-row" :class="{ last: i === cat.items.length - 1, unavailable: !product.available }">
             <div v-if="product.image" class="product-img">
               <img :src="product.image" alt="" />
             </div>
@@ -172,10 +172,10 @@
             </div>
             <div class="product-info">
               <div class="product-name">{{ product.name }}</div>
-              <div class="product-desc">{{ product.desc }}</div>
+              <div class="product-desc">{{ product.description }}</div>
               <div class="product-price">{{ formatPrice(product.price) }}</div>
             </div>
-            <button class="add-btn" @click="addToOrder(product)">
+            <button class="add-btn" :disabled="!product.available" @click="addToOrder(product)">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"/>
                 <line x1="5" y1="12" x2="19" y2="12"/>
@@ -221,7 +221,7 @@
         <input v-model="orderNote" :placeholder="t.notePlaceholder" />
       </div>
       <div class="modal-actions">
-        <button class="btn btn-primary" @click="confirmOrder">{{ t.addOrder }}</button>
+        <button class="btn btn-primary" :disabled="orderLoading" @click="confirmOrder">{{ orderLoading ? t.sending : t.addOrder }}</button>
         <button class="btn btn-secondary" @click="orderModal = null">{{ t.cancel }}</button>
       </div>
     </div>
@@ -229,8 +229,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const WS_BASE = import.meta.env.VITE_WS_URL || 'ws://localhost:3000'
+
+const router = useRouter()
+const route = useRoute()
 const guestName = localStorage.getItem('qrpay_name') || 'Misafir'
 const lang = localStorage.getItem('qrpay_lang') || 'tr'
 
@@ -246,6 +252,8 @@ const i18n = {
     subtotal: 'Ara Toplam', vat: 'KDV', total: 'Toplam',
     note: 'Not (ekstra / çıkarma)', notePlaceholder: 'ör. az pişmiş, soğansız',
     addOrder: 'Siparişe Ekle', cancel: 'İptal',
+    sending: 'Gönderiliyor...',
+    orderError: 'Sipariş gönderilemedi. Tekrar deneyin.',
   },
   en: {
     table: 'Table', bill: 'Bill', menu: 'Menu',
@@ -258,6 +266,8 @@ const i18n = {
     subtotal: 'Subtotal', vat: 'VAT', total: 'Total',
     note: 'Note (extras / removals)', notePlaceholder: 'e.g. medium rare, no onion',
     addOrder: 'Add to Order', cancel: 'Cancel',
+    sending: 'Sending...',
+    orderError: 'Failed to send order. Please try again.',
   },
 }
 const t = computed(() => i18n[lang] || i18n.tr)
@@ -268,44 +278,123 @@ const selectedIds = ref([])
 const orderModal = ref(null)
 const orderNote = ref('')
 const selectedVariations = ref({})
+const orderLoading = ref(false)
 
-// --- Mock data (backend'den gelecek) ---
-const items = ref([
-  { id: 1, name: 'Margherita Pizza', price: 280, claimedBy: null, note: '' },
-  { id: 2, name: 'Cola', price: 60, claimedBy: 'Veli', note: '' },
-  { id: 3, name: 'Cola', price: 60, claimedBy: null, note: '' },
-  { id: 4, name: 'Efes Bira', price: 90, claimedBy: guestName, note: '' },
-  { id: 5, name: 'Efes Bira', price: 90, claimedBy: null, note: '' },
-])
+// Session data
+const session = ref(null)
+const brandName = ref('')
+const vatRate = ref(0.18)
 
-const menuCategories = ref([
-  {
-    id: 1, name: 'Pizza',
-    products: [
-      { id: 101, name: 'Margherita', desc: 'Domates, mozzarella', price: 280, image: null,
-        variations: [{ name: 'Boy', options: [{ label: 'S' }, { label: 'M' }, { label: 'L' }] }] },
-      { id: 102, name: 'Sucuklu', desc: 'Sucuk, biber, mozzarella', price: 320, image: null, variations: [] },
-    ]
-  },
-  {
-    id: 2, name: 'Icecekler',
-    products: [
-      { id: 201, name: 'Cola', desc: '330ml', price: 60, image: null, variations: [] },
-      { id: 202, name: 'Efes Bira', desc: '500ml', price: 90, image: null, variations: [] },
-      { id: 203, name: 'Su', desc: '500ml', price: 20, image: null, variations: [] },
-    ]
-  },
-])
+// Data from API
+const items = ref([])
+const menuCategories = ref([])
+const guestCount = ref(1)
 
-const guestCount = ref(3)
+// WebSocket reference
+let ws = null
+
+function getSession() {
+  try {
+    const raw = localStorage.getItem('qrpay_session')
+    if (!raw) return null
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+async function fetchMenu(tenantSlug) {
+  try {
+    const res = await fetch(`${API_BASE}/api/menu?tenant=${encodeURIComponent(tenantSlug)}`)
+    if (!res.ok) return
+    const data = await res.json()
+    if (data.categories) {
+      menuCategories.value = data.categories
+    }
+  } catch {
+    // Menu fetch failed silently — user can still see bill tab
+  }
+}
+
+function loadLocalOrders() {
+  try {
+    const saved = localStorage.getItem('qrpay_orders')
+    if (saved) {
+      items.value = JSON.parse(saved)
+    }
+  } catch {
+    items.value = []
+  }
+}
+
+function connectWebSocket(tenantSlug) {
+  try {
+    ws = new WebSocket(`${WS_BASE}/ws?tenantSlug=${encodeURIComponent(tenantSlug)}`)
+
+    ws.onmessage = (e) => {
+      try {
+        const event = JSON.parse(e.data)
+        if (event.type === 'ORDER_APPROVED' || event.type === 'SESSION_UPDATED') {
+          // Reload local orders — in the future this would fetch from API
+          loadLocalOrders()
+        }
+      } catch {
+        // Ignore malformed messages
+      }
+    }
+
+    ws.onerror = () => {
+      // WebSocket errors are non-critical for MVP
+    }
+
+    ws.onclose = () => {
+      // Could implement reconnection logic here
+    }
+  } catch {
+    // WebSocket connection failed — non-critical
+  }
+}
+
+onMounted(() => {
+  const sessionData = getSession()
+  if (!sessionData) {
+    router.replace('/no-session')
+    return
+  }
+
+  session.value = sessionData
+  brandName.value = sessionData.tenant?.name || 'QRPay'
+  guestCount.value = sessionData.guestCount || 1
+
+  if (sessionData.tenant?.vatRate != null) {
+    vatRate.value = sessionData.tenant.vatRate
+  }
+
+  // Load saved orders from localStorage
+  loadLocalOrders()
+
+  // Fetch menu from API
+  const tenantSlug = sessionData.tenant?.slug || route.params.tenant
+  fetchMenu(tenantSlug)
+
+  // Connect WebSocket for real-time updates
+  connectWebSocket(tenantSlug)
+})
+
+onUnmounted(() => {
+  if (ws) {
+    ws.close()
+    ws = null
+  }
+})
 
 // Computed
 const availableItems = computed(() => items.value.filter(i => !i.claimedBy || i.claimedBy === guestName))
 const myTotal = computed(() => items.value.filter(i => selectedIds.value.includes(i.id)).reduce((s, i) => s + i.price, 0))
 const subtotal = computed(() => items.value.reduce((s, i) => s + i.price, 0))
-const vatAmount = computed(() => Math.round(subtotal.value * 0.18 / 1.18))
+const vatAmount = computed(() => Math.round(subtotal.value * vatRate.value / (1 + vatRate.value)))
 const total = computed(() => subtotal.value)
-const equalShare = computed(() => Math.ceil(total.value / guestCount.value))
+const equalShare = computed(() => guestCount.value > 0 ? Math.ceil(total.value / guestCount.value) : total.value)
 
 function formatPrice(val) {
   return '\u20BA' + val.toLocaleString('tr-TR')
@@ -318,6 +407,7 @@ function toggleSelect(id) {
 }
 
 function addToOrder(product) {
+  if (!product.available) return
   orderModal.value = product
   orderNote.value = ''
   selectedVariations.value = {}
@@ -328,14 +418,68 @@ function addToOrder(product) {
   }
 }
 
-function confirmOrder() {
-  // TODO: API call
-  orderModal.value = null
+async function confirmOrder() {
+  const sessionData = getSession()
+  if (!sessionData) {
+    router.replace('/no-session')
+    return
+  }
+
+  const item = orderModal.value
+  if (!item) return
+
+  orderLoading.value = true
+
+  try {
+    const res = await fetch(`${API_BASE}/api/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: sessionData.sessionId,
+        items: [{
+          menuItemId: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: 1,
+          note: orderNote.value || ''
+        }]
+      })
+    })
+
+    if (!res.ok) {
+      alert(t.value.orderError)
+      return
+    }
+
+    // Save to localStorage as well
+    const orders = JSON.parse(localStorage.getItem('qrpay_orders') || '[]')
+    orders.push({
+      id: Date.now(),
+      name: item.name,
+      price: item.price,
+      note: orderNote.value || '',
+      claimedBy: guestName
+    })
+    localStorage.setItem('qrpay_orders', JSON.stringify(orders))
+    items.value = orders
+
+    orderModal.value = null
+  } catch {
+    alert(t.value.orderError)
+  } finally {
+    orderLoading.value = false
+  }
 }
 
 function callWaiter() {
-  // TODO: WebSocket event
-  alert('Odeme istegi gonderildi!')
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      type: 'CALL_WAITER',
+      sessionId: session.value?.sessionId
+    }))
+  }
+  // Fallback: visual feedback regardless of WS state
+  alert(lang === 'tr' ? 'Ödeme isteği gönderildi!' : 'Payment request sent!')
 }
 </script>
 
@@ -774,9 +918,19 @@ function callWaiter() {
   -webkit-tap-highlight-color: transparent;
 }
 
+.add-btn:disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
 .add-btn:active {
   transform: scale(0.92);
   background: var(--primary-hover);
+}
+
+.product-row.unavailable {
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 /* Modal */

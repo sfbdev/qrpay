@@ -137,29 +137,46 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { api, getTenantSlug } from '../composables/useApi.js'
 
 const productModal = ref(false)
-const activeCategory = ref(1)
+const activeCategory = ref(null)
 const editingProduct = ref({})
+const error = ref('')
+const loading = ref(false)
 
-const categories = ref([
-  {
-    id: 1, name: 'Pizza', icon: '\uD83C\uDF55',
-    products: [
-      { id: 101, name: 'Margherita', desc: 'Tomato, mozzarella', price: 280, station: 'kitchen', available: true, image: null, categoryId: 1, variations: [{ name: 'Boy' }] },
-      { id: 102, name: 'Sucuklu', desc: 'Sausage, pepper, mozzarella', price: 320, station: 'kitchen', available: true, image: null, categoryId: 1, variations: [] },
-    ]
-  },
-  {
-    id: 2, name: 'Drinks', icon: '\uD83E\uDD64',
-    products: [
-      { id: 201, name: 'Cola', desc: '330ml', price: 60, station: 'bar', available: true, image: null, categoryId: 2, variations: [] },
-      { id: 202, name: 'Efes Bira', desc: '500ml', price: 90, station: 'bar', available: true, image: null, categoryId: 2, variations: [] },
-      { id: 203, name: 'Su', desc: '500ml', price: 20, station: 'bar', available: false, image: null, categoryId: 2, variations: [] },
-    ]
-  },
-])
+const categories = ref([])
+
+async function fetchMenu() {
+  try {
+    const tenantSlug = getTenantSlug()
+    const data = await api(`/api/menu?tenant=${tenantSlug}`)
+    categories.value = (data.categories || []).map(cat => ({
+      id: cat.id,
+      name: cat.name,
+      icon: cat.icon || '\u2603',
+      products: (cat.items || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        desc: item.description || '',
+        price: item.price,
+        station: item.station || 'kitchen',
+        available: item.available !== false,
+        image: item.image || null,
+        categoryId: cat.id,
+        variations: item.variations || [],
+      }))
+    }))
+    if (categories.value.length > 0 && !activeCategory.value) {
+      activeCategory.value = categories.value[0].id
+    }
+  } catch (e) {
+    error.value = e.message
+  }
+}
+
+onMounted(fetchMenu)
 
 const activeProducts = computed(() => {
   const cat = categories.value.find(c => c.id === activeCategory.value)
@@ -168,7 +185,7 @@ const activeProducts = computed(() => {
 
 function getCategoryIcon(catId) {
   const cat = categories.value.find(c => c.id === catId)
-  return cat?.icon || '☷'
+  return cat?.icon || '\u2603'
 }
 
 function openProductModal(p) {
@@ -178,12 +195,72 @@ function openProductModal(p) {
   productModal.value = true
 }
 
-function saveProduct() {
-  productModal.value = false
+async function saveProduct() {
+  loading.value = true
+  try {
+    const p = editingProduct.value
+    if (p.id) {
+      await api(`/api/menu/items/${p.id}`, {
+        method: 'PUT',
+        body: {
+          name: p.name,
+          description: p.desc,
+          price: Number(p.price),
+          station: p.station,
+          categoryId: p.categoryId,
+          available: p.available,
+        },
+      })
+    } else {
+      await api('/api/menu/items', {
+        method: 'POST',
+        body: {
+          categoryId: p.categoryId,
+          name: p.name,
+          description: p.desc,
+          price: Number(p.price),
+          station: p.station,
+          available: p.available,
+        },
+      })
+    }
+    productModal.value = false
+    await fetchMenu()
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    loading.value = false
+  }
 }
 
-function toggleAvail(p) { p.available = !p.available }
-function addCategory() {}
+async function toggleAvail(p) {
+  try {
+    await api(`/api/menu/items/${p.id}`, {
+      method: 'PUT',
+      body: { available: !p.available },
+    })
+    p.available = !p.available
+  } catch (e) {
+    error.value = e.message
+  }
+}
+
+async function addCategory() {
+  const name = prompt('Category name:')
+  if (!name) return
+  loading.value = true
+  try {
+    await api('/api/menu/categories', {
+      method: 'POST',
+      body: { name, sortOrder: categories.value.length },
+    })
+    await fetchMenu()
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <style lang="scss" scoped>
