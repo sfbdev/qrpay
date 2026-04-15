@@ -2,12 +2,12 @@
   <div class="page">
     <div class="page-header">
       <div>
-        <h1>Settings</h1>
-        <p class="page-subtitle">Configure your business preferences</p>
+        <h1>{{ t.settingsTitle }}</h1>
+        <p class="page-subtitle">{{ t.settingsSubtitle }}</p>
       </div>
       <button :class="['btn', saved ? 'btn-success-state' : 'btn-primary']" @click="save">
         <svg v-if="!saved" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-        {{ saved ? 'Saved' : 'Save Changes' }}
+        {{ saved ? t.saved : t.saveChanges }}
       </button>
     </div>
 
@@ -31,36 +31,36 @@
           <Transition name="fade" mode="out-in">
             <!-- Brand -->
             <div v-if="activeTab === 'brand'" key="brand" class="tab-panel">
-              <div class="panel-title">Brand Settings</div>
-              <div class="panel-desc">Customize your brand identity</div>
+              <div class="panel-title">{{ t.brandSettings }}</div>
+              <div class="panel-desc">{{ t.brandSettingsDesc }}</div>
               <div class="form-section">
                 <div class="field">
-                  <label>Business Name</label>
-                  <input v-model="settings.brandName" />
+                  <label>{{ t.businessName }}</label>
+                  <input v-model="settings.name" />
                 </div>
                 <div class="field">
-                  <label>Logo</label>
+                  <label>{{ t.logo }}</label>
                   <div class="logo-upload">
                     <div class="logo-preview">F</div>
                     <div class="logo-upload-info">
-                      <button class="btn btn-secondary btn-sm">Upload Photo</button>
-                      <span class="upload-hint">PNG, JPG up to 2MB</span>
+                      <button class="btn btn-secondary btn-sm">{{ t.uploadPhoto }}</button>
+                      <span class="upload-hint">{{ t.uploadHint }}</span>
                     </div>
                   </div>
                 </div>
                 <div class="fields-row">
                   <div class="field">
-                    <label>Primary Color</label>
+                    <label>{{ t.primaryColor }}</label>
                     <div class="color-input">
                       <div class="color-swatch-wrap">
-                        <input type="color" v-model="settings.primaryColor" class="color-picker" />
-                        <div class="color-swatch" :style="{ background: settings.primaryColor }"></div>
+                        <input type="color" v-model="settings.brandColor" class="color-picker" />
+                        <div class="color-swatch" :style="{ background: settings.brandColor }"></div>
                       </div>
-                      <input v-model="settings.primaryColor" class="color-hex" />
+                      <input v-model="settings.brandColor" class="color-hex" />
                     </div>
                   </div>
                   <div class="field">
-                    <label>Secondary Color</label>
+                    <label>{{ t.secondaryColor }}</label>
                     <div class="color-input">
                       <div class="color-swatch-wrap">
                         <input type="color" v-model="settings.secondaryColor" class="color-picker" />
@@ -73,7 +73,7 @@
 
                 <!-- Theme selection -->
                 <div class="field">
-                  <label>Theme</label>
+                  <label>{{ t.themeLabel }}</label>
                   <div class="theme-cards">
                     <div
                       :class="['theme-card', theme === 'light' && 'active']"
@@ -89,7 +89,7 @@
                           </div>
                         </div>
                       </div>
-                      <span class="theme-card-label">Light</span>
+                      <span class="theme-card-label">{{ t.light }}</span>
                     </div>
                     <div
                       :class="['theme-card', theme === 'dark' && 'active']"
@@ -105,7 +105,7 @@
                           </div>
                         </div>
                       </div>
-                      <span class="theme-card-label">Dark</span>
+                      <span class="theme-card-label">{{ t.dark }}</span>
                     </div>
                   </div>
                 </div>
@@ -114,11 +114,11 @@
 
             <!-- Finance -->
             <div v-else-if="activeTab === 'finance'" key="finance" class="tab-panel">
-              <div class="panel-title">Finance Settings</div>
-              <div class="panel-desc">Configure currency, tax, and receipt settings</div>
+              <div class="panel-title">{{ t.financeSettings }}</div>
+              <div class="panel-desc">{{ t.financeSettingsDesc }}</div>
               <div class="form-section">
                 <div class="field">
-                  <label>Currency</label>
+                  <label>{{ t.currency }}</label>
                   <select v-model="settings.currency">
                     <option value="TRY">TRY — Turk Lirasi</option>
                     <option value="THB">THB — Tayland Bahti</option>
@@ -126,50 +126,50 @@
                   </select>
                 </div>
                 <div class="field">
-                  <label>VAT Rate (%)</label>
+                  <label>{{ t.vatRate }}</label>
                   <input v-model="settings.vatRate" type="number" min="0" max="100" />
                 </div>
                 <div class="field">
-                  <label>VAT Mode</label>
+                  <label>{{ t.vatMode }}</label>
                   <div class="toggle-group">
                     <button
                       :class="['toggle-btn', settings.vatMode === 'inclusive' && 'active']"
                       @click="settings.vatMode = 'inclusive'"
                     >
-                      Inclusive
+                      {{ t.inclusive }}
                     </button>
                     <button
                       :class="['toggle-btn', settings.vatMode === 'exclusive' && 'active']"
                       @click="settings.vatMode = 'exclusive'"
                     >
-                      Exclusive
+                      {{ t.exclusive }}
                     </button>
                   </div>
                 </div>
                 <div class="field">
-                  <label>Receipt Prefix (optional)</label>
-                  <input v-model="settings.receiptPrefix" placeholder="e.g. CAFE" />
-                  <span class="field-hint">Example: CAFE-20260414-0001</span>
+                  <label>{{ t.receiptPrefix }}</label>
+                  <input v-model="settings.receiptPrefix" :placeholder="t.receiptPrefixPlaceholder" />
+                  <span class="field-hint">{{ t.receiptPrefixHint }}</span>
                 </div>
               </div>
             </div>
 
             <!-- Notifications -->
             <div v-else-if="activeTab === 'notifications'" key="notifications" class="tab-panel">
-              <div class="panel-title">Others</div>
-              <div class="panel-desc">Language, notifications, and order settings</div>
+              <div class="panel-title">{{ t.otherSettings }}</div>
+              <div class="panel-desc">{{ t.otherSettingsDesc }}</div>
               <div class="form-section">
                 <div class="field">
-                  <label>Default Language</label>
+                  <label>{{ t.defaultLanguage }}</label>
                   <select v-model="settings.defaultLang">
-                    <option value="tr">Turkish</option>
-                    <option value="en">English</option>
+                    <option value="tr">{{ t.turkish }}</option>
+                    <option value="en">{{ t.english }}</option>
                   </select>
                 </div>
                 <div class="toggle-row">
                   <div class="toggle-info">
-                    <div class="toggle-label">Sound Notifications</div>
-                    <div class="toggle-desc">Play sound on new order</div>
+                    <div class="toggle-label">{{ t.soundNotif }}</div>
+                    <div class="toggle-desc">{{ t.soundNotifDesc }}</div>
                   </div>
                   <div
                     :class="['toggle-switch', settings.soundNotif && 'on']"
@@ -180,8 +180,8 @@
                 </div>
                 <div class="toggle-row">
                   <div class="toggle-info">
-                    <div class="toggle-label">Visual Notifications</div>
-                    <div class="toggle-desc">Show popup on screen</div>
+                    <div class="toggle-label">{{ t.visualNotif }}</div>
+                    <div class="toggle-desc">{{ t.visualNotifDesc }}</div>
                   </div>
                   <div
                     :class="['toggle-switch', settings.visualNotif && 'on']"
@@ -195,13 +195,13 @@
 
                 <div class="toggle-row">
                   <div class="toggle-info">
-                    <div class="toggle-label">Order Approval</div>
+                    <div class="toggle-label">{{ t.orderApproval }}</div>
                     <div class="toggle-desc">
                       <template v-if="settings.orderApprovalRequired">
-                        Customer orders wait for kiosk approval
+                        {{ t.orderApprovalOn }}
                       </template>
                       <template v-else>
-                        Customer orders go directly to kitchen
+                        {{ t.orderApprovalOff }}
                       </template>
                     </div>
                   </div>
@@ -222,48 +222,91 @@
 </template>
 
 <script setup>
-import { ref, reactive, watch, onMounted } from 'vue'
+import { ref, reactive, watch, computed, onMounted } from 'vue'
 import { useTheme } from '../composables/useTheme.js'
+import { api } from '../composables/useApi.js'
+import { t, setLang } from '../composables/useLang.js'
+import { toastSuccess, toastError } from '../composables/useToast.js'
 
 const { theme, toggle } = useTheme()
 const activeTab = ref('brand')
 const saved = ref(false)
+const loading = ref(true)
+const error = ref('')
 
-function applyBrandColor(color) {
-  document.documentElement.style.setProperty('--brand', color)
-}
-
-const tabs = [
-  { id: 'brand', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>', label: 'Brand' },
-  { id: 'finance', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>', label: 'Finance' },
-  { id: 'notifications', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>', label: 'Others' },
-]
+const tabs = computed(() => [
+  { id: 'brand', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>', label: t.value.tabs.brand },
+  { id: 'finance', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>', label: t.value.tabs.finance },
+  { id: 'notifications', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>', label: t.value.tabs.notifications },
+])
 
 const settings = reactive({
-  brandName: 'Freya Cafe',
-  primaryColor: '#6366F1',
+  name: '',
+  brandColor: '#E84040',
   secondaryColor: '#2D2D2D',
   currency: 'TRY',
   vatRate: 18,
   vatMode: 'inclusive',
   receiptPrefix: '',
-  defaultLang: 'en',
+  defaultLang: 'tr',
   soundNotif: true,
   visualNotif: true,
   orderApprovalRequired: false,
 })
 
-watch(() => settings.primaryColor, applyBrandColor)
+function applyBrandColor(color) {
+  document.documentElement.style.setProperty('--brand', color)
+}
 
-onMounted(() => applyBrandColor(settings.primaryColor))
+watch(() => settings.brandColor, applyBrandColor)
+
+async function fetchSettings() {
+  try {
+    const data = await api('/api/settings')
+    Object.assign(settings, data)
+    setLang(data.defaultLang)
+    applyBrandColor(settings.brandColor)
+  } catch (e) {
+    error.value = e.message
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(fetchSettings)
 
 function setTheme(val) {
   if (theme.value !== val) toggle()
 }
 
-function save() {
-  saved.value = true
-  setTimeout(() => { saved.value = false }, 2000)
+async function save() {
+  error.value = ''
+  try {
+    const updated = await api('/api/settings', {
+      method: 'PUT',
+      body: {
+        name: settings.name,
+        brandColor: settings.brandColor,
+        secondaryColor: settings.secondaryColor,
+        vatRate: Number(settings.vatRate),
+        vatMode: settings.vatMode,
+        currency: settings.currency,
+        receiptPrefix: settings.receiptPrefix,
+        defaultLang: settings.defaultLang,
+        soundNotif: settings.soundNotif,
+        visualNotif: settings.visualNotif,
+        orderApprovalRequired: settings.orderApprovalRequired,
+      },
+    })
+    Object.assign(settings, updated)
+    setLang(updated.defaultLang)
+    saved.value = true
+    setTimeout(() => { saved.value = false }, 2000)
+    toastSuccess(t.value.saved)
+  } catch (e) {
+    error.value = e.message
+    toastError(e.message)
+  }
 }
 </script>
 

@@ -3,7 +3,7 @@
     <div class="page-header">
       <div>
         <p class="header-date">{{ today }}</p>
-        <h1>Good morning, Admin</h1>
+        <h1>Merhaba, {{ userName }}</h1>
       </div>
     </div>
 
@@ -38,18 +38,19 @@
             <RouterLink to="/app/tables" class="btn btn-ghost btn-sm">View All</RouterLink>
           </div>
           <div class="table-list">
+            <div v-if="!activeTables.length" class="empty-state">Açık masa yok</div>
             <div v-for="t in activeTables" :key="t.id" class="table-row">
               <div class="table-row-left">
                 <div class="table-num-badge">{{ t.number }}</div>
                 <div class="table-row-info">
                   <div class="table-row-top">
-                    <span class="table-name">Table {{ t.number }}</span>
-                    <span :class="['badge', statusBadge(t.status)]">{{ t.status }}</span>
+                    <span class="table-name">{{ t.label }}</span>
+                    <span :class="['badge', statusBadge(t.status)]">{{ statusLabel(t.status) }}</span>
                   </div>
-                  <div class="table-row-meta">{{ t.guests }} guests</div>
+                  <div class="table-row-meta">{{ t.guestName || 'Misafir' }}{{ t.guestCount ? ' · ' + t.guestCount + ' kişi' : '' }}</div>
                 </div>
               </div>
-              <div class="table-total">{{ t.total.toLocaleString('tr-TR') }} TL</div>
+              <div class="table-total">₺{{ t.total.toLocaleString('tr-TR') }}</div>
             </div>
           </div>
         </div>
@@ -60,6 +61,7 @@
             <RouterLink to="/app/orders" class="btn btn-ghost btn-sm">View All</RouterLink>
           </div>
           <div class="order-list">
+            <div v-if="!recentOrders.length" class="empty-state">Bugün sipariş yok</div>
             <div v-for="o in recentOrders" :key="o.id" class="order-row">
               <div class="order-left">
                 <div class="order-dot-wrap">
@@ -67,10 +69,10 @@
                 </div>
                 <div class="order-info">
                   <div class="order-item">{{ o.item }}</div>
-                  <div class="order-meta">Table {{ o.table }} · {{ o.time }}</div>
+                  <div class="order-meta">{{ o.tableLabel }} · {{ timeAgo(o.createdAt) }}</div>
                 </div>
               </div>
-              <span :class="['badge', orderBadge(o.status)]">{{ o.status }}</span>
+              <span :class="['badge', orderBadge(o.status)]">{{ orderBadgeLabel(o.status) }}</span>
             </div>
           </div>
         </div>
@@ -80,54 +82,100 @@
 </template>
 
 <script setup>
-const today = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { api } from '../composables/useApi.js'
 
-const stats = [
-  {
-    icon: '▦', value: '8 / 14', label: 'Occupied Tables', color: 'icon-indigo',
-    trend: { value: '2', up: true, period: 'last 1 hour' }
-  },
-  {
-    icon: '☰', value: '23', label: 'Active Orders', color: 'icon-amber',
-    trend: { value: '12%', up: true, period: 'vs. yesterday' }
-  },
-  {
-    icon: '₺', value: '₺4.280', label: 'Daily Revenue', color: 'icon-emerald',
-    trend: { value: '8%', up: true, period: 'vs. yesterday' }
-  },
-  {
-    icon: '⚇', value: '34', label: 'Guests', color: 'icon-violet',
-    trend: null
-  },
-]
+const today = new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })
+const userName = JSON.parse(localStorage.getItem('qrpay_kiosk_user') || '{}')?.name || 'Admin'
 
-const activeTables = [
-  { id: 1, number: 3, guests: 4, total: 520, status: 'Open' },
-  { id: 2, number: 5, guests: 2, total: 180, status: 'Waiting' },
-  { id: 3, number: 7, guests: 6, total: 940, status: 'Payment Req.' },
-  { id: 4, number: 9, guests: 3, total: 310, status: 'Open' },
-]
+const data = ref(null)
+const loading = ref(true)
+let refreshInterval = null
 
-const recentOrders = [
-  { id: 1, item: 'Margherita Pizza', table: 3, time: '2 min ago', status: 'New' },
-  { id: 2, item: '2x Efes Bira', table: 7, time: '5 min ago', status: 'Preparing' },
-  { id: 3, item: 'Cola', table: 5, time: '8 min ago', status: 'Delivered' },
-  { id: 4, item: 'Sucuklu Pizza', table: 9, time: '12 min ago', status: 'Delivered' },
-]
+async function fetchDashboard() {
+  try {
+    data.value = await api('/api/dashboard')
+  } catch (e) {
+    console.error('Dashboard fetch error:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchDashboard()
+  refreshInterval = setInterval(fetchDashboard, 15000)
+})
+
+onUnmounted(() => {
+  clearInterval(refreshInterval)
+})
+
+const stats = computed(() => {
+  const s = data.value?.stats
+  if (!s) return []
+  return [
+    {
+      value: `${s.occupiedTables} / ${s.totalTables}`,
+      label: 'Dolu Masa',
+      color: 'icon-indigo',
+      trend: null,
+    },
+    {
+      value: String(s.activeOrders),
+      label: 'Aktif Sipariş',
+      color: 'icon-amber',
+      trend: null,
+    },
+    {
+      value: '₺' + s.dailyRevenue.toLocaleString('tr-TR'),
+      label: 'Günlük Ciro',
+      color: 'icon-emerald',
+      trend: null,
+    },
+    {
+      value: String(s.totalGuests),
+      label: 'Misafir',
+      color: 'icon-violet',
+      trend: null,
+    },
+  ]
+})
+
+const activeTables = computed(() => data.value?.activeTables || [])
+const recentOrders = computed(() => data.value?.recentOrders || [])
+
+function timeAgo(dateStr) {
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 1000)
+  if (diff < 60) return `${diff}sn önce`
+  if (diff < 3600) return `${Math.floor(diff / 60)}dk önce`
+  return `${Math.floor(diff / 3600)}sa önce`
+}
 
 function statusBadge(s) {
-  if (s === 'Payment Req.') return 'badge-yellow'
-  if (s === 'Waiting') return 'badge-blue'
-  return 'badge-green'
-}
-function orderBadge(s) {
-  if (s === 'New') return 'badge-red'
-  if (s === 'Preparing') return 'badge-yellow'
+  if (s === 'WAITING') return 'badge-yellow'
+  if (s === 'OPEN') return 'badge-green'
   return 'badge-gray'
 }
+function statusLabel(s) {
+  if (s === 'WAITING') return 'Bekliyor'
+  return 'Açık'
+}
+function orderBadge(s) {
+  if (s === 'PENDING_APPROVAL') return 'badge-red'
+  if (s === 'APPROVED') return 'badge-yellow'
+  return 'badge-gray'
+}
+function orderBadgeLabel(s) {
+  if (s === 'PENDING_APPROVAL') return 'Onay Bekliyor'
+  if (s === 'APPROVED') return 'Hazırlanıyor'
+  if (s === 'SERVED') return 'Servis Edildi'
+  if (s === 'CANCELLED') return 'İptal'
+  return s
+}
 function orderDotColor(s) {
-  if (s === 'New') return 'red'
-  if (s === 'Preparing') return 'amber'
+  if (s === 'PENDING_APPROVAL') return 'red'
+  if (s === 'APPROVED') return 'amber'
   return 'gray'
 }
 </script>
@@ -391,6 +439,13 @@ h3 {
 .dot-red { background: var(--danger-text); }
 .dot-amber { background: var(--warning-text); }
 .dot-gray { background: var(--text-3); }
+
+.empty-state {
+  font-size: 13px;
+  color: var(--text-3);
+  padding: 12px;
+  text-align: center;
+}
 
 .order-info {
   flex: 1;

@@ -12,10 +12,7 @@
           </svg>
         </div>
         <h1 class="left-title">QRPay Kiosk</h1>
-        <p class="left-desc">
-          Manage your business from a single panel.<br />
-          Tables, orders, cashier and menu — all here.
-        </p>
+        <p class="left-desc">{{ t.loginTagline }}</p>
         <div class="left-dots">
           <span class="dot active"></span>
           <span class="dot"></span>
@@ -26,43 +23,43 @@
 
     <div class="login-right">
       <div class="right-content">
-        <div class="form-badge">Welcome back</div>
-        <h2 class="form-title">Sign in to your account</h2>
-        <p class="form-subtitle">Enter your credentials to continue</p>
+        <div class="form-badge">{{ t.welcomeBack }}</div>
+        <h2 class="form-title">{{ t.signInToAccount }}</h2>
+        <p class="form-subtitle">{{ t.enterCredentials }}</p>
 
         <form @submit.prevent="login" class="login-form">
           <div class="field">
-            <label for="username">Username</label>
+            <label for="username">{{ t.username }}</label>
             <input
               id="username"
               v-model="form.username"
               type="text"
-              placeholder="admin"
+              :placeholder="t.usernamePlaceholder"
               autocomplete="username"
             />
           </div>
           <div class="field">
             <div class="field-header">
-              <label for="password">Password</label>
-              <a href="#" class="forgot-link">Forgot?</a>
+              <label for="password">{{ t.password }}</label>
+              <a href="#" class="forgot-link">{{ t.forgotPassword }}</a>
             </div>
             <input
               id="password"
               v-model="form.password"
               type="password"
-              placeholder="Enter your password"
+              :placeholder="t.passwordPlaceholder"
               autocomplete="current-password"
             />
           </div>
           <p v-if="error" class="error-msg">{{ error }}</p>
           <button type="submit" class="btn btn-primary login-btn" :disabled="loading">
-            {{ loading ? 'Signing in...' : 'Sign In' }}
+            {{ loading ? t.signingIn : t.signIn }}
             <svg v-if="!loading" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </button>
         </form>
 
         <div class="form-footer">
-          <span class="version">v1.0.0 · Freya Cafe</span>
+          <span class="version">v1.0.0</span>
         </div>
       </div>
     </div>
@@ -73,6 +70,7 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, setToken } from '../composables/useApi.js'
+import { t } from '../composables/useLang.js'
 
 const router = useRouter()
 const form = reactive({ username: '', password: '' })
@@ -83,7 +81,7 @@ async function login() {
   error.value = ''
   loading.value = true
   try {
-    const tenantSlug = 'freya-cafe'
+    const tenantSlug = 'freya-bar'
     const data = await api('/auth/login', {
       method: 'POST',
       body: { tenantSlug, username: form.username, password: form.password },

@@ -1,0 +1,90 @@
+/* vue3-toastify override — projenin tasarım sistemiyle uyumlu */
+
+.Toastify__toast-container--top-right {
+  top: 20px;
+  right: 20px;
+}
+
+.Toastify__toast {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 12px;
+  padding: 14px 16px;
+  min-height: unset;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid transparent;
+  backdrop-filter: blur(8px);
+  gap: 10px;
+
+  /* Light mode */
+  background: #ffffff;
+  color: #09090B;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .Toastify__toast {
+  background: #18181B;
+  color: #FAFAFA;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* İkon renkleri */
+.Toastify__toast--success .Toastify__toast-icon svg { fill: #059669; }
+.Toastify__toast--error   .Toastify__toast-icon svg { fill: #DC2626; }
+.Toastify__toast--warning .Toastify__toast-icon svg { fill: #D97706; }
+.Toastify__toast--info    .Toastify__toast-icon svg { fill: #4F46E5; }
+
+[data-theme="dark"] .Toastify__toast--success .Toastify__toast-icon svg { fill: #34D399; }
+[data-theme="dark"] .Toastify__toast--error   .Toastify__toast-icon svg { fill: #F87171; }
+[data-theme="dark"] .Toastify__toast--warning .Toastify__toast-icon svg { fill: #FBBF24; }
+[data-theme="dark"] .Toastify__toast--info    .Toastify__toast-icon svg { fill: #A5B4FC; }
+
+/* Progress bar */
+.Toastify__progress-bar--success { background: #059669; }
+.Toastify__progress-bar--error   { background: #DC2626; }
+.Toastify__progress-bar--warning { background: #D97706; }
+.Toastify__progress-bar--info    { background: #4F46E5; }
+
+[data-theme="dark"] .Toastify__progress-bar--success { background: #34D399; }
+[data-theme="dark"] .Toastify__progress-bar--error   { background: #F87171; }
+[data-theme="dark"] .Toastify__progress-bar--warning { background: #FBBF24; }
+[data-theme="dark"] .Toastify__progress-bar--info    { background: #A5B4FC; }
+
+.Toastify__progress-bar {
+  height: 2px;
+  border-radius: 0 0 12px 12px;
+  opacity: 0.7;
+}
+
+/* Close butonu */
+.Toastify__close-button {
+  color: #A1A1AA;
+  opacity: 1;
+  align-self: center;
+}
+
+.Toastify__close-button:hover {
+  color: #09090B;
+}
+
+[data-theme="dark"] .Toastify__close-button:hover {
+  color: #FAFAFA;
+}
+
+/* Animasyon */
+.Toastify__slide-enter-right {
+  animation: toastSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}

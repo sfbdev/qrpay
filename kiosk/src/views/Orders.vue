@@ -2,8 +2,8 @@
   <div class="page">
     <div class="page-header">
       <div>
-        <h1>Orders</h1>
-        <p class="page-subtitle">Track and manage incoming orders</p>
+        <h1>{{ t.ordersTitle }}</h1>
+        <p class="page-subtitle">{{ t.ordersSubtitle }}</p>
       </div>
       <div class="filter-group">
         <button
@@ -53,17 +53,17 @@
           <div v-if="order.status === 'New'" class="card-actions">
             <button class="action-approve" @click="approve(order)">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              Approve
+              {{ t.approve }}
             </button>
             <button class="action-reject" @click="reject(order)">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              Reject
+              {{ t.reject }}
             </button>
           </div>
           <div v-else-if="order.status === 'Preparing'" class="card-actions">
             <button class="action-deliver" @click="deliver(order)">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-              Mark as Delivered
+              {{ t.markDelivered }}
             </button>
           </div>
         </div>
@@ -73,8 +73,8 @@
         <div class="empty-icon-wrap">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
         </div>
-        <p class="empty-title">No orders found</p>
-        <p class="empty-desc">Orders matching your filter will appear here</p>
+        <p class="empty-title">{{ t.noOrdersFound }}</p>
+        <p class="empty-desc">{{ t.noOrdersHint }}</p>
       </div>
     </div>
   </div>
@@ -83,6 +83,8 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { api, getTenantSlug } from '../composables/useApi.js'
+import { t } from '../composables/useLang.js'
+import { toastSuccess, toastError, toastWarning } from '../composables/useToast.js'
 
 const activeFilter = ref('all')
 const error = ref('')
@@ -93,10 +95,10 @@ const orders = ref([])
 const filters = computed(() => {
   const newCount = orders.value.filter(o => o.status === 'New').length
   return [
-    { label: 'All', value: 'all' },
-    { label: 'New', value: 'New', count: newCount || undefined },
-    { label: 'Preparing', value: 'Preparing' },
-    { label: 'Delivered', value: 'Delivered' },
+    { label: t.value.filterAll, value: 'all' },
+    { label: t.value.filterNew, value: 'New', count: newCount || undefined },
+    { label: t.value.filterPreparing, value: 'Preparing' },
+    { label: t.value.filterDelivered, value: 'Delivered' },
   ]
 })
 
@@ -172,8 +174,10 @@ async function reject(o) {
   try {
     await api(`/api/orders/${o.id}/cancel`, { method: 'PUT' })
     orders.value = orders.value.filter(x => x.id !== o.id)
+    toastWarning(t.value.reject)
   } catch (e) {
     error.value = e.message
+    toastError(e.message)
   }
 }
 

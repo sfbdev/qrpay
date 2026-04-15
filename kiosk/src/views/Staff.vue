@@ -2,12 +2,12 @@
   <div class="page">
     <div class="page-header">
       <div>
-        <h1>Staff</h1>
-        <p class="page-subtitle">Manage team members and roles</p>
+        <h1>{{ t.staffTitle }}</h1>
+        <p class="page-subtitle">{{ t.staffSubtitle }}</p>
       </div>
       <button class="btn btn-primary">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add Staff
+        {{ t.addStaff }}
       </button>
     </div>
 
@@ -16,11 +16,11 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Last Login</th>
-              <th>Actions</th>
+              <th>{{ t.name }}</th>
+              <th>{{ t.email }}</th>
+              <th>{{ t.role }}</th>
+              <th>{{ t.lastLogin }}</th>
+              <th>{{ t.actions }}</th>
             </tr>
           </thead>
           <tbody>
@@ -39,7 +39,7 @@
               </td>
               <td class="cell-muted">{{ s.lastLogin }}</td>
               <td>
-                <button class="btn btn-secondary btn-sm">Edit</button>
+                <button class="btn btn-secondary btn-sm">{{ t.edit }}</button>
               </td>
             </tr>
           </tbody>
@@ -50,6 +50,8 @@
 </template>
 
 <script setup>
+import { t } from '../composables/useLang.js'
+
 const staff = [
   { id: 1, name: 'Furkan Bayram', email: 'furkan@freyacafe.com', role: 'admin', lastLogin: 'Today 09:15' },
   { id: 2, name: 'Tonk Ekkasit', email: 'tonk@freyacafe.com', role: 'cashier', lastLogin: 'Today 10:30' },

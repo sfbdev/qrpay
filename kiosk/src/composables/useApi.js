@@ -15,7 +15,7 @@ export function removeToken() {
 }
 
 export function getTenantSlug() {
-  return localStorage.getItem('qrpay_kiosk_tenant') || 'freya-cafe'
+  return localStorage.getItem('qrpay_kiosk_tenant') || 'freya-bar'
 }
 
 export async function api(path, options = {}) {

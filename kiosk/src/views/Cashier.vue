@@ -2,8 +2,8 @@
   <div class="page">
     <div class="page-header">
       <div>
-        <h1>Cashier</h1>
-        <p class="page-subtitle">Process payments and close bills</p>
+        <h1>{{ t.cashierTitle }}</h1>
+        <p class="page-subtitle">{{ t.cashierSubtitle }}</p>
       </div>
     </div>
 
@@ -11,7 +11,7 @@
       <div class="cashier-layout">
         <!-- Left: Open bills -->
         <div class="bills-panel">
-          <div class="panel-label">Open Bills</div>
+          <div class="panel-label">{{ t.openBills }}</div>
           <div class="bills-list">
             <div
               v-for="bill in bills"
@@ -59,21 +59,21 @@
 
           <div class="summary-box">
             <div class="sum-row">
-              <span>Subtotal</span>
+              <span>{{ t.subtotal }}</span>
               <span>{{ subtotal.toLocaleString('tr-TR') }} TL</span>
             </div>
             <div class="sum-row">
-              <span>VAT (18% incl.)</span>
+              <span>{{ t.vat }} (18%)</span>
               <span>{{ vat.toLocaleString('tr-TR') }} TL</span>
             </div>
             <div class="sum-row total">
-              <span>Total</span>
+              <span>{{ t.total }}</span>
               <strong>{{ activeBill.total.toLocaleString('tr-TR') }} TL</strong>
             </div>
           </div>
 
           <div class="payment-section">
-            <div class="pm-label">Payment Method</div>
+            <div class="pm-label">{{ t.paymentMethod }}</div>
             <div class="pm-options">
               <button
                 :class="['pm-btn', payMethod === 'cash' && 'active']"
@@ -83,7 +83,7 @@
                   <rect x="2" y="6" width="20" height="12" rx="2"/>
                   <circle cx="12" cy="12" r="3"/>
                 </svg>
-                <span>Cash</span>
+                <span>{{ t.cash }}</span>
               </button>
               <button
                 :class="['pm-btn', payMethod === 'card' && 'active']"
@@ -93,13 +93,13 @@
                   <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
                   <line x1="1" y1="10" x2="23" y2="10"/>
                 </svg>
-                <span>Card</span>
+                <span>{{ t.card }}</span>
               </button>
             </div>
           </div>
 
           <button class="btn btn-danger close-btn" @click="closeAccount">
-            Close Bill
+            {{ t.closeBill }}
           </button>
         </div>
 
@@ -110,8 +110,8 @@
               <circle cx="12" cy="12" r="3"/>
             </svg>
           </div>
-          <p class="empty-title">Select a bill</p>
-          <p class="empty-desc">Choose an open bill from the left panel</p>
+          <p class="empty-title">{{ t.selectBill }}</p>
+          <p class="empty-desc">{{ t.selectBillHint }}</p>
         </div>
       </div>
     </div>
@@ -121,6 +121,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../composables/useApi.js'
+import { t } from '../composables/useLang.js'
+import { toastSuccess, toastError } from '../composables/useToast.js'
 
 const payMethod = ref('card')
 const activeBill = ref(null)
@@ -200,8 +202,10 @@ async function closeAccount() {
     bills.value = bills.value.filter(b => b.id !== activeBill.value.id)
     activeBill.value = null
     await fetchBills()
+    toastSuccess(t.value.closeBill)
   } catch (e) {
     error.value = e.message
+    toastError(e.message)
   } finally {
     loading.value = false
   }

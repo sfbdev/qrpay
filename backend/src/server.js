@@ -25,6 +25,8 @@ function buildServer(opts = {}) {
   app.register(require('./routes/menu'))
   app.register(require('./routes/orders'))
   app.register(require('./routes/payments'))
+  app.register(require('./routes/dashboard'))
+  app.register(require('./routes/settings'))
 
   // Health check
   app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))

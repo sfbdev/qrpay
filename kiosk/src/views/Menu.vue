@@ -2,12 +2,12 @@
   <div class="page">
     <div class="page-header">
       <div>
-        <h1>Menu</h1>
-        <p class="page-subtitle">Manage your products and categories</p>
+        <h1>{{ t.menuTitle }}</h1>
+        <p class="page-subtitle">{{ t.menuSubtitle }}</p>
       </div>
       <button class="btn btn-primary" @click="openProductModal(null)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add Item
+        {{ t.addItem }}
       </button>
     </div>
 
@@ -15,7 +15,7 @@
       <div class="menu-layout">
         <!-- Categories -->
         <div class="cats-panel">
-          <div class="panel-label">Categories</div>
+          <div class="panel-label">{{ t.categories }}</div>
           <div class="cats-list">
             <div
               v-for="cat in categories"
@@ -32,7 +32,7 @@
           </div>
           <button class="btn btn-secondary btn-sm add-cat-btn" @click="addCategory">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Category
+            {{ t.addCategory }}
           </button>
         </div>
 
@@ -51,11 +51,11 @@
                   <div class="product-price">{{ p.price.toLocaleString('tr-TR') }} TL</div>
                 </div>
                 <div class="product-actions">
-                  <button class="btn btn-secondary btn-sm" @click="openProductModal(p)">Edit</button>
+                  <button class="btn btn-secondary btn-sm" @click="openProductModal(p)">{{ t.edit }}</button>
                   <div
                     :class="['avail-toggle', p.available && 'on']"
                     @click="toggleAvail(p)"
-                    :title="p.available ? 'Active' : 'Inactive'"
+                    :title="p.available ? t.active : t.inactive"
                   >
                     <div class="avail-thumb"></div>
                   </div>
@@ -75,7 +75,7 @@
       <div v-if="productModal" class="modal-backdrop" @click.self="productModal = null">
         <div class="modal card">
           <div class="modal-header">
-            <h3>{{ editingProduct.id ? 'Edit Item' : 'New Item' }}</h3>
+            <h3>{{ editingProduct.id ? t.editItem : t.newItem }}</h3>
             <button class="modal-close" @click="productModal = null">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"/>
@@ -87,38 +87,38 @@
           <div class="form">
             <div class="fields-row">
               <div class="field">
-                <label>Item Name</label>
-                <input v-model="editingProduct.name" placeholder="Margherita Pizza" />
+                <label>{{ t.itemName }}</label>
+                <input v-model="editingProduct.name" :placeholder="t.itemNamePlaceholder" />
               </div>
               <div class="field">
-                <label>Price (TL)</label>
+                <label>{{ t.priceTL }}</label>
                 <input v-model="editingProduct.price" type="number" placeholder="0" />
               </div>
             </div>
             <div class="field">
-              <label>Description</label>
-              <input v-model="editingProduct.desc" placeholder="Domates, mozzarella..." />
+              <label>{{ t.description }}</label>
+              <input v-model="editingProduct.desc" :placeholder="t.descriptionPlaceholder" />
             </div>
             <div class="fields-row">
               <div class="field">
-                <label>Station</label>
+                <label>{{ t.station }}</label>
                 <div class="toggle-group">
                   <button
                     :class="['toggle-btn', editingProduct.station === 'kitchen' && 'active']"
                     @click="editingProduct.station = 'kitchen'"
                   >
-                    Kitchen
+                    {{ t.kitchen }}
                   </button>
                   <button
                     :class="['toggle-btn', editingProduct.station === 'bar' && 'active']"
                     @click="editingProduct.station = 'bar'"
                   >
-                    Bar
+                    {{ t.bar }}
                   </button>
                 </div>
               </div>
               <div class="field">
-                <label>Category</label>
+                <label>{{ t.categoryLabel }}</label>
                 <select v-model="editingProduct.categoryId">
                   <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
                 </select>
@@ -127,8 +127,8 @@
           </div>
 
           <div class="modal-footer">
-            <button class="btn btn-secondary" @click="productModal = null">Cancel</button>
-            <button class="btn btn-primary" @click="saveProduct">Save</button>
+            <button class="btn btn-secondary" @click="productModal = null">{{ t.cancel }}</button>
+            <button class="btn btn-primary" @click="saveProduct">{{ t.save }}</button>
           </div>
         </div>
       </div>
@@ -139,6 +139,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { api, getTenantSlug } from '../composables/useApi.js'
+import { t } from '../composables/useLang.js'
+import { toastSuccess, toastError } from '../composables/useToast.js'
 
 const productModal = ref(false)
 const activeCategory = ref(null)
@@ -226,8 +228,10 @@ async function saveProduct() {
     }
     productModal.value = false
     await fetchMenu()
+    toastSuccess(t.value.save + ' ✓')
   } catch (e) {
     error.value = e.message
+    toastError(e.message)
   } finally {
     loading.value = false
   }
@@ -240,8 +244,10 @@ async function toggleAvail(p) {
       body: { available: !p.available },
     })
     p.available = !p.available
+    toastSuccess(p.available ? t.value.active : t.value.inactive)
   } catch (e) {
     error.value = e.message
+    toastError(e.message)
   }
 }
 
@@ -255,8 +261,10 @@ async function addCategory() {
       body: { name, sortOrder: categories.value.length },
     })
     await fetchMenu()
+    toastSuccess(t.value.addCategory)
   } catch (e) {
     error.value = e.message
+    toastError(e.message)
   } finally {
     loading.value = false
   }

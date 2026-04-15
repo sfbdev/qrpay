@@ -12,9 +12,15 @@ model Tenant {
   slug                   String         @unique
   name                   String
   brandColor             String         @default("#E84040")
+  secondaryColor         String         @default("#2D2D2D")
   logoUrl                String?
-  vatRate                Float          @default(0)
+  vatRate                Float          @default(18)
+  vatMode                String         @default("inclusive")
   currency               String         @default("TRY")
+  receiptPrefix          String         @default("")
+  defaultLang            String         @default("tr")
+  soundNotif             Boolean        @default(true)
+  visualNotif            Boolean        @default(true)
   orderApprovalRequired  Boolean        @default(false)
   createdAt              DateTime       @default(now())
 
