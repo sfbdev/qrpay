@@ -3,6 +3,6 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "npx prisma migrate resolve --applied 0_init || true && npx prisma migrate deploy && node prisma/seed.js && node src/index.js"
+    "startCommand": "npx prisma migrate resolve --applied 0_init; npx prisma migrate deploy && node prisma/seed.js && node src/index.js"
   }
 }
