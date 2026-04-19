@@ -51,6 +51,7 @@
                   <div class="product-price">{{ p.price.toLocaleString('tr-TR') }} TL</div>
                 </div>
                 <div class="product-actions">
+                  <span v-if="p.requiresApproval" class="approval-badge" :title="t.requiresApprovalHint">⚠ Onay</span>
                   <button class="btn btn-secondary btn-sm" @click="openProductModal(p)">{{ t.edit }}</button>
                   <div
                     :class="['avail-toggle', p.available && 'on']"
@@ -126,6 +127,21 @@
             </div>
           </div>
 
+          <div class="approval-row">
+            <label class="approval-label">
+              <div class="approval-text">
+                <span>{{ t.requiresApproval }}</span>
+                <span class="approval-hint">{{ t.requiresApprovalHint }}</span>
+              </div>
+              <div
+                :class="['avail-toggle', editingProduct.requiresApproval && 'on']"
+                @click="editingProduct.requiresApproval = !editingProduct.requiresApproval"
+              >
+                <div class="avail-thumb"></div>
+              </div>
+            </label>
+          </div>
+
           <div class="modal-footer">
             <button class="btn btn-secondary" @click="productModal = null">{{ t.cancel }}</button>
             <button class="btn btn-primary" @click="saveProduct">{{ t.save }}</button>
@@ -165,6 +181,7 @@ async function fetchMenu() {
         price: item.price,
         station: item.station || 'kitchen',
         available: item.available !== false,
+        requiresApproval: item.requiresApproval === true,
         image: item.image || null,
         categoryId: cat.id,
         variations: item.variations || [],
@@ -193,7 +210,7 @@ function getCategoryIcon(catId) {
 function openProductModal(p) {
   editingProduct.value = p
     ? { ...p }
-    : { name: '', price: 0, desc: '', station: 'kitchen', categoryId: activeCategory.value, available: true, variations: [] }
+    : { name: '', price: 0, desc: '', station: 'kitchen', categoryId: activeCategory.value, available: true, requiresApproval: false, variations: [] }
   productModal.value = true
 }
 
@@ -211,6 +228,7 @@ async function saveProduct() {
           station: p.station,
           categoryId: p.categoryId,
           available: p.available,
+          requiresApproval: p.requiresApproval === true,
         },
       })
     } else {
@@ -223,6 +241,7 @@ async function saveProduct() {
           price: Number(p.price),
           station: p.station,
           available: p.available,
+          requiresApproval: p.requiresApproval === true,
         },
       })
     }
@@ -648,5 +667,41 @@ h3 {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
+}
+
+.approval-row {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.approval-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+.approval-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.approval-text span:first-child {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.approval-hint {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.approval-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--warning-bg, #fff7ed);
+  color: var(--warning-text, #c2410c);
+  border: 1px solid var(--warning-border, #fed7aa);
 }
 </style>

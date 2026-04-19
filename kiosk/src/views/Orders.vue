@@ -25,17 +25,23 @@
           :key="order.id"
           :class="['order-card card', 'status-' + indicatorColor(order.status), order.justApproved && 'approved-flash']"
         >
-          <!-- Top row: table + item + status -->
+          <!-- Top row: table + status -->
           <div class="card-top">
-            <div class="card-table-badge">{{ order.table }}</div>
+            <div class="card-table-badge">
+              <span class="table-label">Masa</span>
+              <span class="table-num">{{ order.table }}</span>
+            </div>
             <div class="card-main">
-              <div class="card-item">{{ order.item }}</div>
               <div class="card-meta">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                <span>{{ order.guest }}</span>
+                <span>{{ order.guest || '—' }}</span>
                 <span class="sep">·</span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 <span>{{ order.time }}</span>
+                <span class="sep">·</span>
+                <span class="source-badge" :class="order.source === 'KIOSK' ? 'source-kiosk' : 'source-customer'">
+                  {{ order.source === 'KIOSK' ? 'Kiosk' : 'Müşteri' }}
+                </span>
               </div>
             </div>
             <span :class="['status-badge', 'status-badge-' + indicatorColor(order.status)]">
@@ -43,10 +49,16 @@
             </span>
           </div>
 
-          <!-- Note -->
-          <div v-if="order.note" class="card-note">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            {{ order.note }}
+          <!-- Items list -->
+          <div class="card-items">
+            <div v-for="item in order.items" :key="item.id" class="card-item-row">
+              <span class="item-qty">{{ item.quantity }}x</span>
+              <div class="item-name-wrap">
+                <span class="item-name">{{ item.name }}</span>
+                <span v-if="item.note" class="item-note">{{ item.note }}</span>
+              </div>
+              <span class="item-price">{{ formatPrice(item.price * item.quantity) }}</span>
+            </div>
           </div>
 
           <!-- Actions -->
@@ -86,7 +98,7 @@ import { api, getTenantSlug } from '../composables/useApi.js'
 import { t } from '../composables/useLang.js'
 import { toastSuccess, toastError, toastWarning } from '../composables/useToast.js'
 
-const activeFilter = ref('all')
+const activeFilter = ref('New')
 const error = ref('')
 const loading = ref(false)
 
@@ -121,20 +133,19 @@ function timeAgo(dateStr) {
   return `${diff} min ago`
 }
 
-function mapOrder(o) {
-  const itemSummary = o.items?.map(i => {
-    const prefix = i.quantity > 1 ? `${i.quantity}x ` : ''
-    return prefix + i.name
-  }).join(', ') || ''
+function formatPrice(val) {
+  return '₺' + Number(val).toLocaleString('tr-TR')
+}
 
+function mapOrder(o) {
   return {
     id: o.id,
-    table: o.tableNumber || o.session?.tableNumber || '?',
-    item: itemSummary,
+    table: o.session?.table?.number ?? o.session?.table?.label ?? '?',
+    items: (o.items || []).map(i => ({ id: i.id, name: i.name, quantity: i.quantity || 1, price: i.price, note: i.note || '' })),
     guest: o.guestName || o.session?.guestName || '',
     time: timeAgo(o.createdAt),
     status: mapStatus(o.status),
-    note: o.note || '',
+    source: o.source || 'CUSTOMER',
     justApproved: false,
   }
 }
@@ -312,18 +323,31 @@ h1 {
 }
 
 .card-table-badge {
-  width: 42px;
-  height: 42px;
+  min-width: 52px;
+  height: 52px;
   border-radius: 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: var(--primary);
+  border: none;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--text-1);
   flex-shrink: 0;
+  padding: 0 10px;
+  gap: 1px;
+}
+.table-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.75);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.table-num {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
@@ -332,13 +356,53 @@ h1 {
   min-width: 0;
 }
 
-.card-item {
+.card-items {
+  padding: 0 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-item-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.card-item-row:last-child { border-bottom: none; }
+
+.item-qty {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  min-width: 22px;
+}
+
+.item-name-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.item-name {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-1);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.item-note {
+  font-size: 11px;
+  color: var(--text-2);
+  font-style: italic;
+}
+
+.item-price {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
 }
 
 .card-meta {
@@ -353,6 +417,23 @@ h1 {
 .card-meta svg { flex-shrink: 0; }
 
 .sep { color: var(--border-strong); }
+
+.source-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.source-customer {
+  background: var(--primary-subtle);
+  color: var(--primary);
+}
+.source-kiosk {
+  background: var(--surface-2);
+  color: var(--text-2);
+}
 
 /* Status badge */
 .status-badge {
@@ -380,22 +461,6 @@ h1 {
 .status-badge-gray   { background: var(--surface-2);  color: var(--text-3); }
 .status-badge-gray .status-dot { background: var(--text-3); }
 
-/* Note */
-.card-note {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0 20px 16px;
-  padding: 10px 12px;
-  background: var(--warning-bg);
-  color: var(--warning-text);
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 10px;
-  border: 1px solid var(--warning-border);
-}
-
-.card-note svg { flex-shrink: 0; }
 
 /* Actions */
 .card-actions {

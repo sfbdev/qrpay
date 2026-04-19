@@ -116,11 +116,14 @@ async function orderRoutes(fastify) {
       }
     }
 
+    // Check if any item requires approval
+    const anyItemRequiresApproval = menuItems.some(m => m.requiresApproval)
+
     // Determine initial status
     let status
     if (source === 'KIOSK') {
       status = 'APPROVED'
-    } else if (session.tenant.orderApprovalRequired) {
+    } else if (session.tenant.orderApprovalRequired || anyItemRequiresApproval) {
       status = 'PENDING_APPROVAL'
     } else {
       status = 'APPROVED'

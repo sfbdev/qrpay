@@ -22,8 +22,8 @@
       >
         <span class="flag">🇹🇷</span>
         <div class="lang-info">
-          <span class="lang-name">Turkce</span>
-          <span class="lang-sub">Turkce olarak devam et</span>
+          <span class="lang-name">Türkçe</span>
+          <span class="lang-sub">Türkçe olarak devam et</span>
         </div>
         <div class="radio-dot">
           <div v-if="selected === 'tr'" class="radio-inner"></div>

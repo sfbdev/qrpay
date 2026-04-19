@@ -176,7 +176,10 @@
               <div class="product-price">{{ formatPrice(product.price) }}</div>
             </div>
             <button class="add-btn" :disabled="!product.available" @click="addToOrder(product)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <span v-if="cart.find(c => c.menuItemId === product.id)" class="add-badge">
+                {{ cart.filter(c => c.menuItemId === product.id).reduce((s,c)=>s+c.quantity,0) }}
+              </span>
+              <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"/>
                 <line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
@@ -184,6 +187,15 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Cart bar (menu tab) -->
+    <div v-if="tab === 'menu' && cartCount > 0" class="sticky-bottom">
+      <button class="cart-bar" @click="cartOpen = true">
+        <span class="cart-bar-count">{{ cartCount }}</span>
+        <span class="cart-bar-label">{{ t.cartTitle }}</span>
+        <span class="cart-bar-total">{{ formatPrice(cartTotal) }} →</span>
+      </button>
     </div>
 
     <!-- Sticky bottom CTA -->
@@ -221,8 +233,65 @@
         <input v-model="orderNote" :placeholder="t.notePlaceholder" />
       </div>
       <div class="modal-actions">
-        <button class="btn btn-primary" :disabled="orderLoading" @click="confirmOrder">{{ orderLoading ? t.sending : t.addOrder }}</button>
+        <button class="btn btn-primary" @click="addToCart">{{ t.addToCart }}</button>
         <button class="btn btn-secondary" @click="orderModal = null">{{ t.cancel }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cart Sheet -->
+  <div v-if="cartOpen" class="modal-backdrop" @click.self="cartOpen = false">
+    <div class="modal card cart-sheet">
+      <div class="modal-handle"></div>
+      <div class="cart-header">
+        <h3>{{ t.cartTitle }}</h3>
+        <button class="cart-close" @click="cartOpen = false">✕</button>
+      </div>
+
+      <div v-if="cart.length === 0" class="cart-empty">{{ t.cartEmpty }}</div>
+
+      <div v-else class="cart-items">
+        <div v-for="entry in cart" :key="entry.cartId" class="cart-row">
+          <div class="cart-row-info">
+            <span class="cart-row-name">{{ entry.name }}</span>
+            <span v-if="entry.note" class="cart-row-note">{{ entry.note }}</span>
+          </div>
+          <div class="cart-row-right">
+            <div class="qty-stepper">
+              <button class="qty-btn" @click="changeQty(entry.cartId, -1)">−</button>
+              <span class="qty-val">{{ entry.quantity }}</span>
+              <button class="qty-btn" @click="changeQty(entry.cartId, 1)">+</button>
+            </div>
+            <span class="cart-row-price">{{ formatPrice(entry.price * entry.quantity) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="cart.length > 0" class="cart-total-row">
+        <span>Toplam</span>
+        <strong>{{ formatPrice(cartTotal) }}</strong>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-primary" :disabled="cart.length === 0" @click="cartOpen = false; showConfirm = true">
+          {{ t.sendOrder }} · {{ formatPrice(cartTotal) }}
+        </button>
+        <button class="btn btn-secondary" @click="cartOpen = false">{{ t.cancel }}</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Order Modal -->
+  <div v-if="showConfirm" class="modal-backdrop">
+    <div class="modal card confirm-modal">
+      <div class="confirm-icon">🍽️</div>
+      <h3 class="confirm-title">{{ t.confirmTitle }}</h3>
+      <p class="confirm-msg">{{ t.confirmMsg }}</p>
+      <div class="modal-actions">
+        <button class="btn btn-primary" :disabled="orderLoading" @click="sendCart">
+          {{ orderLoading ? t.sending : t.confirmYes }}
+        </button>
+        <button class="btn btn-secondary" @click="showConfirm = false">{{ t.confirmNo }}</button>
       </div>
     </div>
   </div>
@@ -251,9 +320,17 @@ const i18n = {
     perPerson: 'kişi başı', callWaiter: 'Ödeme İstiyorum',
     subtotal: 'Ara Toplam', vat: 'KDV', total: 'Toplam',
     note: 'Not (ekstra / çıkarma)', notePlaceholder: 'ör. az pişmiş, soğansız',
-    addOrder: 'Siparişe Ekle', cancel: 'İptal',
+    addToCart: 'Sepete Ekle', cancel: 'İptal',
     sending: 'Gönderiliyor...',
     orderError: 'Sipariş gönderilemedi. Tekrar deneyin.',
+    confirmTitle: 'Sipariş Verilsin mi?',
+    confirmMsg: 'Sepetinizdeki ürünler mutfağa iletilecek.',
+    confirmYes: 'Evet, Gönder',
+    confirmNo: 'Vazgeç',
+    cartTitle: 'Sepetim',
+    cartEmpty: 'Sepet boş',
+    sendOrder: 'Sipariş Ver',
+    remove: 'Sil',
   },
   en: {
     table: 'Table', bill: 'Bill', menu: 'Menu',
@@ -265,9 +342,17 @@ const i18n = {
     perPerson: 'per person', callWaiter: 'Request Payment',
     subtotal: 'Subtotal', vat: 'VAT', total: 'Total',
     note: 'Note (extras / removals)', notePlaceholder: 'e.g. medium rare, no onion',
-    addOrder: 'Add to Order', cancel: 'Cancel',
+    addToCart: 'Add to Cart', cancel: 'Cancel',
     sending: 'Sending...',
     orderError: 'Failed to send order. Please try again.',
+    confirmTitle: 'Place Order?',
+    confirmMsg: 'Your cart items will be sent to the kitchen.',
+    confirmYes: 'Yes, Send',
+    confirmNo: 'Cancel',
+    cartTitle: 'My Cart',
+    cartEmpty: 'Cart is empty',
+    sendOrder: 'Place Order',
+    remove: 'Remove',
   },
 }
 const t = computed(() => i18n[lang] || i18n.tr)
@@ -276,9 +361,15 @@ const tab = ref('bill')
 const splitMode = ref('select')
 const selectedIds = ref([])
 const orderModal = ref(null)
+const showConfirm = ref(false)
+const cartOpen = ref(false)
+const cart = ref([])
 const orderNote = ref('')
 const selectedVariations = ref({})
 const orderLoading = ref(false)
+
+const cartCount = computed(() => cart.value.reduce((s, c) => s + c.quantity, 0))
+const cartTotal = computed(() => cart.value.reduce((s, c) => s + c.price * c.quantity, 0))
 
 // Session data
 const session = ref(null)
@@ -418,52 +509,58 @@ function addToOrder(product) {
   }
 }
 
-async function confirmOrder() {
-  const sessionData = getSession()
-  if (!sessionData) {
-    router.replace('/no-session')
-    return
-  }
-
+function addToCart() {
   const item = orderModal.value
   if (!item) return
+  const note = orderNote.value.trim()
+  const existing = cart.value.find(c => c.menuItemId === item.id && c.note === note)
+  if (existing) {
+    existing.quantity++
+  } else {
+    cart.value.push({ cartId: Date.now() + Math.random(), menuItemId: item.id, name: item.name, price: item.price, note, quantity: 1 })
+  }
+  orderModal.value = null
+  orderNote.value = ''
+}
 
+function changeQty(cartId, delta) {
+  const entry = cart.value.find(c => c.cartId === cartId)
+  if (!entry) return
+  entry.quantity += delta
+  if (entry.quantity <= 0) cart.value = cart.value.filter(c => c.cartId !== cartId)
+}
+
+function removeFromCart(cartId) {
+  cart.value = cart.value.filter(c => c.cartId !== cartId)
+}
+
+async function sendCart() {
+  const sessionData = getSession()
+  if (!sessionData) { router.replace('/no-session'); return }
+  if (cart.value.length === 0) return
   orderLoading.value = true
-
   try {
     const res = await fetch(`${API_BASE}/api/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sessionId: sessionData.sessionId,
-        items: [{
-          menuItemId: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: 1,
-          note: orderNote.value || ''
-        }]
+        source: 'CUSTOMER',
+        items: cart.value.map(c => ({ menuItemId: c.menuItemId, name: c.name, price: c.price, quantity: c.quantity, note: c.note }))
       })
     })
-
-    if (!res.ok) {
-      alert(t.value.orderError)
-      return
-    }
-
-    // Save to localStorage as well
+    if (!res.ok) { alert(t.value.orderError); return }
     const orders = JSON.parse(localStorage.getItem('qrpay_orders') || '[]')
-    orders.push({
-      id: Date.now(),
-      name: item.name,
-      price: item.price,
-      note: orderNote.value || '',
-      claimedBy: guestName
+    cart.value.forEach(c => {
+      for (let i = 0; i < c.quantity; i++) {
+        orders.push({ id: Date.now() + Math.random(), name: c.name, price: c.price, note: c.note, claimedBy: guestName })
+      }
     })
     localStorage.setItem('qrpay_orders', JSON.stringify(orders))
     items.value = orders
-
-    orderModal.value = null
+    cart.value = []
+    cartOpen.value = false
+    showConfirm.value = false
   } catch {
     alert(t.value.orderError)
   } finally {
@@ -1049,5 +1146,185 @@ function callWaiter() {
   flex-direction: column;
   gap: 8px;
   margin-top: 4px;
+}
+
+/* Cart bar */
+.cart-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md, 14px);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--transition);
+}
+.cart-bar:active { background: var(--primary-hover); }
+.cart-bar-count {
+  background: rgba(255,255,255,0.25);
+  border-radius: 20px;
+  padding: 2px 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.cart-bar-label { flex: 1; text-align: left; }
+.cart-bar-total { font-weight: 700; }
+
+/* Add-btn badge */
+.add-badge {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* Cart sheet */
+.cart-sheet {
+  max-height: 80vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.cart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cart-header h3 { margin: 0; }
+.cart-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--surface-2);
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cart-empty {
+  text-align: center;
+  color: var(--text-3);
+  padding: 24px 0;
+  font-size: 15px;
+}
+.cart-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.cart-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.cart-row:last-child { border-bottom: none; }
+.cart-row-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.cart-row-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-1);
+}
+.cart-row-note {
+  font-size: 12px;
+  color: var(--text-2);
+}
+.cart-row-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.qty-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.qty-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.qty-btn:active { background: var(--primary-subtle); }
+.qty-val {
+  width: 28px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-1);
+  border-left: 1.5px solid var(--border);
+  border-right: 1.5px solid var(--border);
+}
+.cart-row-price {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-1);
+  min-width: 52px;
+  text-align: right;
+}
+.cart-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--border);
+  font-size: 16px;
+  color: var(--text-2);
+}
+.cart-total-row strong {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.confirm-modal {
+  text-align: center;
+  padding: 28px 24px;
+}
+.confirm-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
+.confirm-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+.confirm-msg {
+  font-size: 14px;
+  color: var(--text-secondary, #666);
+  margin: 0 0 20px;
+  line-height: 1.5;
 }
 </style>

@@ -150,6 +150,7 @@
                 </div>
                 <div v-if="qrDataUrl" class="qr-box">
                   <img :src="qrDataUrl" alt="QR" class="qr-img" />
+                  <a :href="qrUrl" target="_blank" class="qr-link">{{ qrUrl }}</a>
                 </div>
               </div>
             </div>
@@ -395,6 +396,7 @@ const selected = ref(null)
 const error = ref('')
 const loading = ref(false)
 const qrDataUrl = ref('')
+const qrUrl = ref('')
 
 // Add Table form
 const newTableNumber = ref('')
@@ -430,6 +432,7 @@ const CUSTOMER_URL = import.meta.env.VITE_CUSTOMER_URL || window.location.origin
 async function generateQR(tableId) {
   const slug = getTenantSlug()
   const url = `${CUSTOMER_URL}/r/${slug}/t/${tableId}`
+  qrUrl.value = url
   try {
     qrDataUrl.value = await QRCode.toDataURL(url, {
       width: 180,
@@ -446,6 +449,7 @@ watch(selected, (val) => {
     generateQR(val.id)
   } else {
     qrDataUrl.value = ''
+    qrUrl.value = ''
   }
 })
 const { isFullscreen, toggle: toggleFullscreen } = useFullscreen()
@@ -666,6 +670,51 @@ function printQR() {}
 
 // WebSocket
 let ws = null
+
+let audioCtx = null
+
+function ensureAudioCtx() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume()
+  }
+  return audioCtx
+}
+
+// Call once on first user interaction to unlock audio
+function unlockAudio() {
+  ensureAudioCtx()
+  window.removeEventListener('click', unlockAudio)
+  window.removeEventListener('keydown', unlockAudio)
+}
+window.addEventListener('click', unlockAudio)
+window.addEventListener('keydown', unlockAudio)
+
+function playOrderSound() {
+  try {
+    const ctx = ensureAudioCtx()
+    const notes = [880, 1100, 1320]
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.type = 'sine'
+      osc.frequency.value = freq
+      const start = ctx.currentTime + i * 0.15
+      gain.gain.setValueAtTime(0, start)
+      gain.gain.linearRampToValueAtTime(0.4, start + 0.04)
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35)
+      osc.start(start)
+      osc.stop(start + 0.35)
+    })
+  } catch {
+    // Audio not supported
+  }
+}
+
 function connectWs() {
   const tenantSlug = getTenantSlug()
   const WS_BASE = import.meta.env.VITE_WS_URL || 'ws://localhost:3000'
@@ -673,7 +722,10 @@ function connectWs() {
   ws.onmessage = (e) => {
     try {
       const event = JSON.parse(e.data)
-      if (['TABLE_OPENED', 'TABLE_CLOSED', 'ORDER_CREATED'].includes(event.type)) {
+      if (event.type === 'ORDER_CREATED') {
+        playOrderSound()
+        fetchTables()
+      } else if (['TABLE_OPENED', 'TABLE_CLOSED'].includes(event.type)) {
         fetchTables()
       }
     } catch {
@@ -1104,6 +1156,19 @@ h1 {
   padding: 8px;
   border: 1px solid var(--primary-subtle-border);
   box-shadow: var(--shadow-sm);
+}
+
+.qr-link {
+  display: block;
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--brand);
+  word-break: break-all;
+  text-align: center;
+  text-decoration: none;
+}
+.qr-link:hover {
+  text-decoration: underline;
 }
 
 .qr-img {

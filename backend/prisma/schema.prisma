@@ -118,7 +118,8 @@ model MenuItem {
   name        String
   description String?
   price       Float
-  available   Boolean @default(true)
+  available        Boolean @default(true)
+  requiresApproval Boolean @default(false)
 
   tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   category MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)

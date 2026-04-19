@@ -3,6 +3,6 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "npx prisma migrate deploy && node src/index.js"
+    "startCommand": "npx prisma db push && node prisma/seed.js && node src/index.js"
   }
 }

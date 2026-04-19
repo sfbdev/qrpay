@@ -144,6 +144,8 @@ const messages = {
     save: 'Kaydet',
     active: 'Aktif',
     inactive: 'Pasif',
+    requiresApproval: 'Onay Gereksin',
+    requiresApprovalHint: 'Bu ürünü içeren siparişler kiosk onayına düşer',
 
     // Staff
     staffTitle: 'Personel',
@@ -345,6 +347,8 @@ const messages = {
     save: 'Save',
     active: 'Active',
     inactive: 'Inactive',
+    requiresApproval: 'Requires Approval',
+    requiresApprovalHint: 'Orders containing this item will require kiosk approval',
 
     // Staff
     staffTitle: 'Staff',

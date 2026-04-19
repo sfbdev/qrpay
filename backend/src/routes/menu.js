@@ -165,11 +165,12 @@ async function menuRoutes(fastify) {
           description: { type: 'string' },
           price: { type: 'number' },
           available: { type: 'boolean' },
+          requiresApproval: { type: 'boolean' },
         },
       },
     },
   }, async (request, reply) => {
-    const { categoryId, name, description, price, available } = request.body
+    const { categoryId, name, description, price, available, requiresApproval } = request.body
     const { tenantId } = request.user
 
     // Verify category belongs to tenant
@@ -189,6 +190,7 @@ async function menuRoutes(fastify) {
         description: description || null,
         price,
         available: available !== undefined ? available : true,
+        requiresApproval: requiresApproval !== undefined ? requiresApproval : false,
       },
     })
 
@@ -209,6 +211,7 @@ async function menuRoutes(fastify) {
           description: { type: 'string' },
           price: { type: 'number' },
           available: { type: 'boolean' },
+          requiresApproval: { type: 'boolean' },
         },
       },
     },

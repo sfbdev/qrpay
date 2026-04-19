@@ -20,14 +20,15 @@ export function getTenantSlug() {
 
 export async function api(path, options = {}) {
   const token = getToken()
+  const hasBody = options.body !== undefined
   const res = await fetch(`${BASE}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    body: hasBody ? JSON.stringify(options.body) : undefined,
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Request failed' }))
