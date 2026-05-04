@@ -3,3 +3,11 @@ dist/
 dist-electron/
 .DS_Store
 *.local
+
+# env files
+.env
+.env.*
+backend/.env
+
+# claude settings
+.claude/settings.local.json
